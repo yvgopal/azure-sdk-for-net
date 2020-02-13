@@ -1001,6 +1001,7 @@ namespace Azure.Storage.Blobs
             CancellationToken cancellationToken = default)
         {
             var client = new BlockBlobClient(Uri, Pipeline, AuthenticationPolicy, SourceOptions);
+
             singleUploadThreshold ??= client.BlockBlobMaxUploadBlobBytes;
             Debug.Assert(singleUploadThreshold <= client.BlockBlobMaxUploadBlobBytes);
 

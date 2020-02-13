@@ -89,6 +89,12 @@ namespace Azure.Storage.Test
         private string TargetHierarchicalNamespaceTenantName { get; set; }
 
         /// <summary>
+        /// Gets the name of the tenant in the Tenants dictionary to use for
+        /// any tests that require managed disk
+        /// </summary>
+        private string TargetManagedDiskTenantName { get; set; }
+
+        /// <summary>
         /// Gets the tenant to use by default for our tests.
         /// </summary>
         public static TenantConfiguration DefaultTargetTenant =>
@@ -127,10 +133,16 @@ namespace Azure.Storage.Test
             GetKeyVault("TargetKeyVault", s_configurations.Value.TargetKeyVaultName);
 
         /// <summary>
-        /// Gets a tenant to use for any tests that require hierarchical namespace
+        /// Gets a tenant to use for any tests that require hierarchical namespace.
         /// </summary>
         public static TenantConfiguration DefaultTargetHierarchicalNamespaceTenant =>
             GetTenant("TargetHierarchicalNamespaceTenant", s_configurations.Value.TargetHierarchicalNamespaceTenantName);
+
+        /// <summary>
+        /// Gets a tenant to use for any tests that a managed disk account.
+        /// </summary>
+        public static TenantConfiguration DefaultTargetManagedDiskTenant =>
+            GetTenant("TargetManagedDiskTenant", s_configurations.Value.TargetManagedDiskTenantName);
 
         /// <summary>
         /// When loading our test configuration, we'll check the
@@ -249,6 +261,7 @@ namespace Azure.Storage.Test
                 TargetOAuthTenantName = Get("TargetOAuthTenant"),
                 TargetKeyVaultName = Get("TargetKeyVault"),
                 TargetHierarchicalNamespaceTenantName = Get("TargetHierarchicalNamespaceTenant"),
+                TargetManagedDiskTenantName = Get("TargetManagedDiskTenant"),
                 Tenants =
                     config.Element("TenantConfigurations").Elements("TenantConfiguration")
                     .Select(TenantConfiguration.Parse)

@@ -14,24 +14,33 @@ namespace Azure.Storage.Blobs.Specialized
         public EncryptedBlobClient(System.Uri blobUri, Azure.Core.TokenCredential credential, Azure.Storage.Blobs.Specialized.ClientsideEncryptionOptions encryptionOptions, Azure.Storage.Blobs.BlobClientOptions options = null) { }
         public EncryptedBlobClient(System.Uri blobUri, Azure.Storage.Blobs.Specialized.ClientsideEncryptionOptions encryptionOptions, Azure.Storage.Blobs.BlobClientOptions options = null) { }
         public EncryptedBlobClient(System.Uri blobUri, Azure.Storage.StorageSharedKeyCredential credential, Azure.Storage.Blobs.Specialized.ClientsideEncryptionOptions encryptionOptions, Azure.Storage.Blobs.BlobClientOptions options = null) { }
-        protected override Azure.Storage.Blobs.BlobClient.UploadContent TransformUploadContent(Azure.Storage.Blobs.BlobClient.UploadContent content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) { throw null; }
-        protected override System.Threading.Tasks.Task<Azure.Storage.Blobs.BlobClient.UploadContent> TransformUploadContentAsync(Azure.Storage.Blobs.BlobClient.UploadContent content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) { throw null; }
-    }
-    public static partial class SpecializedBlobExtensions
-    {
-        public static Azure.Storage.Blobs.Specialized.EncryptedBlobClient GetEncryptedBlobClient(this Azure.Storage.Blobs.BlobContainerClient containerClient, string blobName, Azure.Storage.Blobs.Specialized.ClientsideEncryptionOptions encryptionOptions) { throw null; }
+        protected override Azure.Storage.Blobs.Models.BlobUploadContent TransformUploadContent(Azure.Storage.Blobs.Models.BlobUploadContent content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) { throw null; }
+        protected override System.Threading.Tasks.Task<Azure.Storage.Blobs.Models.BlobUploadContent> TransformUploadContentAsync(Azure.Storage.Blobs.Models.BlobUploadContent content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) { throw null; }
     }
 }
 namespace Azure.Storage.Blobs.Specialized.Models
 {
-    public enum ClientsideEncryptionAlgorithm
+    [System.Runtime.InteropServices.StructLayoutAttribute(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    public readonly partial struct ClientSideEncryptionAlgorithm
     {
-        AES_CBC_256 = 0,
+        private readonly object _dummy;
+        private readonly int _dummyPrimitive;
+        public ClientSideEncryptionAlgorithm(string value) { throw null; }
+        public static Azure.Storage.Blobs.Specialized.Models.ClientSideEncryptionAlgorithm AesCbc256 { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } }
+        public bool Equals(Azure.Storage.Blobs.Specialized.Models.ClientSideEncryptionAlgorithm other) { throw null; }
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        public override bool Equals(object obj) { throw null; }
+        [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
+        public override int GetHashCode() { throw null; }
+        public static bool operator ==(Azure.Storage.Blobs.Specialized.Models.ClientSideEncryptionAlgorithm left, Azure.Storage.Blobs.Specialized.Models.ClientSideEncryptionAlgorithm right) { throw null; }
+        public static implicit operator Azure.Storage.Blobs.Specialized.Models.ClientSideEncryptionAlgorithm (string value) { throw null; }
+        public static bool operator !=(Azure.Storage.Blobs.Specialized.Models.ClientSideEncryptionAlgorithm left, Azure.Storage.Blobs.Specialized.Models.ClientSideEncryptionAlgorithm right) { throw null; }
+        public override string ToString() { throw null; }
     }
     public partial class EncryptionAgent
     {
         public EncryptionAgent() { }
-        public string EncryptionAlgorithm { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
+        public Azure.Storage.Blobs.Specialized.Models.ClientSideEncryptionAlgorithm EncryptionAlgorithm { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
         public string Protocol { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
     }
     public partial class WrappedKey

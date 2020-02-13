@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -607,6 +608,7 @@ namespace Azure.Storage.Blobs.Specialized
                         encryptionKey: CustomerProvidedKey?.EncryptionKey,
                         encryptionKeySha256: CustomerProvidedKey?.EncryptionKeyHash,
                         encryptionAlgorithm: CustomerProvidedKey?.EncryptionAlgorithm,
+                        encryptionScope: EncryptionScope,
                         blobContentDisposition: httpHeaders?.ContentDisposition,
                         ifModifiedSince: conditions?.IfModifiedSince,
                         ifUnmodifiedSince: conditions?.IfUnmodifiedSince,
@@ -838,6 +840,7 @@ namespace Azure.Storage.Blobs.Specialized
                         encryptionKey: CustomerProvidedKey?.EncryptionKey,
                         encryptionKeySha256: CustomerProvidedKey?.EncryptionKeyHash,
                         encryptionAlgorithm: CustomerProvidedKey?.EncryptionAlgorithm,
+                        encryptionScope: EncryptionScope,
                         ifSequenceNumberLessThanOrEqualTo: conditions?.IfSequenceNumberLessThanOrEqual,
                         ifSequenceNumberLessThan: conditions?.IfSequenceNumberLessThan,
                         ifSequenceNumberEqualTo: conditions?.IfSequenceNumberEqual,
@@ -1007,6 +1010,7 @@ namespace Azure.Storage.Blobs.Specialized
                         encryptionKey: CustomerProvidedKey?.EncryptionKey,
                         encryptionKeySha256: CustomerProvidedKey?.EncryptionKeyHash,
                         encryptionAlgorithm: CustomerProvidedKey?.EncryptionAlgorithm,
+                        encryptionScope: EncryptionScope,
                         ifSequenceNumberLessThanOrEqualTo: conditions?.IfSequenceNumberLessThanOrEqual,
                         ifSequenceNumberLessThan: conditions?.IfSequenceNumberLessThan,
                         ifSequenceNumberEqualTo: conditions?.IfSequenceNumberEqual,
@@ -1209,8 +1213,8 @@ namespace Azure.Storage.Blobs.Specialized
 
         #region GetPageRangesDiff
         /// <summary>
-        /// The <see cref="GetPageRangesDiff"/> operation returns the
-        /// list of page ranges that differ between a
+        /// The <see cref="GetPageRangesDiff"/>
+        /// operation returns the list of page ranges that differ between a
         /// <paramref name="previousSnapshot"/> and this page blob. Changed pages
         /// include both updated and cleared pages.
         ///
@@ -1258,14 +1262,16 @@ namespace Azure.Storage.Blobs.Specialized
                 range,
                 snapshot,
                 previousSnapshot,
+                previousSnapshotUri: default,
                 conditions,
-                false, // async
+                async: false,
+                operationName: $"{nameof(PageBlobClient)}.{nameof(GetPageRangesDiff)}",
                 cancellationToken)
                 .EnsureCompleted();
 
         /// <summary>
-        /// The <see cref="GetPageRangesDiffAsync"/> operation returns the
-        /// list of page ranges that differ between a
+        /// The <see cref="GetPageRangesDiffAsync"/>
+        /// operation returns the list of page ranges that differ between a
         /// <paramref name="previousSnapshot"/> and this page blob. Changed pages
         /// include both updated and cleared pages.
         ///
@@ -1313,8 +1319,10 @@ namespace Azure.Storage.Blobs.Specialized
                 range,
                 snapshot,
                 previousSnapshot,
+                previousSnapshotUri: default,
                 conditions,
-                true, // async
+                async: true,
+                operationName: $"{nameof(PageBlobClient)}.{nameof(GetPageRangesDiff)}",
                 cancellationToken)
                 .ConfigureAwait(false);
 
@@ -1342,12 +1350,23 @@ namespace Azure.Storage.Blobs.Specialized
         /// snapshot, as long as the snapshot specified by
         /// <paramref name="previousSnapshot"/> is the older of the two.
         /// </param>
+        /// <param name="previousSnapshotUri">
+        /// This parameter only works with managed disk storage accounts.
+        /// Specifies that the response will contain only pages that were
+        /// changed between target blob and previous snapshot.  Changed pages
+        /// include both updated and cleared pages. The target blob may be a
+        /// snapshot, as long as the snapshot specified by
+        /// <paramref name="previousSnapshotUri"/> is the older of the two.
+        /// </param>
         /// <param name="conditions">
         /// Optional <see cref="PageBlobRequestConditions"/> to add
         /// conditions on getting page ranges for the this blob.
         /// </param>
         /// <param name="async">
         /// Whether to invoke the operation asynchronously.
+        /// </param>
+        /// <param name="operationName">
+        /// The name of the operation.
         /// </param>
         /// <param name="cancellationToken">
         /// Optional <see cref="CancellationToken"/> to propagate
@@ -1365,8 +1384,10 @@ namespace Azure.Storage.Blobs.Specialized
             HttpRange? range,
             string snapshot,
             string previousSnapshot,
+            Uri previousSnapshotUri,
             PageBlobRequestConditions conditions,
             bool async,
+            string operationName,
             CancellationToken cancellationToken)
         {
             using (Pipeline.BeginLoggingScope(nameof(PageBlobClient)))
@@ -1377,6 +1398,7 @@ namespace Azure.Storage.Blobs.Specialized
                     $"{nameof(Uri)}: {Uri}\n" +
                     $"{nameof(snapshot)}: {snapshot}\n" +
                     $"{nameof(previousSnapshot)}: {previousSnapshot}\n" +
+                    $"{nameof(previousSnapshotUri)}: {previousSnapshotUri}\n" +
                     $"{nameof(conditions)}: {conditions}");
                 try
                 {
@@ -1387,6 +1409,7 @@ namespace Azure.Storage.Blobs.Specialized
                         version: Version.ToVersionString(),
                         snapshot: snapshot,
                         prevsnapshot: previousSnapshot,
+                        prevSnapshotUrl: previousSnapshotUri,
                         range: range?.ToString(),
                         leaseId: conditions?.LeaseId,
                         ifModifiedSince: conditions?.IfModifiedSince,
@@ -1394,7 +1417,7 @@ namespace Azure.Storage.Blobs.Specialized
                         ifMatch: conditions?.IfMatch,
                         ifNoneMatch: conditions?.IfNoneMatch,
                         async: async,
-                        operationName: $"{nameof(PageBlobClient)}.{nameof(GetPageRangesDiff)}",
+                        operationName: operationName,
                         cancellationToken: cancellationToken)
                         .ConfigureAwait(false);
 
@@ -1415,6 +1438,127 @@ namespace Azure.Storage.Blobs.Specialized
             }
         }
         #endregion GetPageRangesDiff
+
+        #region GetManagedDiskPageRangesDiff
+        /// <summary>
+        /// The <see cref="GetManagedDiskPageRangesDiff"/>
+        /// operation returns the list of page ranges that differ between a
+        /// <paramref name="previousSnapshotUri"/> and this page blob. Changed pages
+        /// include both updated and cleared pages.  This API only works with
+        /// managed disk storage accounts.
+        ///
+        /// For more information, see <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/get-page-ranges" />.
+        /// </summary>
+        /// <param name="range">
+        /// Optionally specifies the range of bytes over which to list ranges,
+        /// inclusively. If omitted, then all ranges for the blob are returned.
+        /// </param>
+        /// <param name="snapshot">
+        /// Optionally specifies the blob snapshot to retrieve page ranges
+        /// information from. For more information on working with blob snapshots,
+        /// <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/creating-a-snapshot-of-a-blob"/>.
+        /// </param>
+        /// <param name="previousSnapshotUri">
+        /// This parameter only works with managed disk storage accounts.
+        /// Specifies that the response will contain only pages that were
+        /// changed between target blob and previous snapshot.  Changed pages
+        /// include both updated and cleared pages. The target blob may be a
+        /// snapshot, as long as the snapshot specified by
+        /// <paramref name="previousSnapshotUri"/> is the older of the two.
+        /// </param>
+        /// <param name="conditions">
+        /// Optional <see cref="PageBlobRequestConditions"/> to add
+        /// conditions on getting page ranges for the this blob.
+        /// </param>
+        /// <param name="cancellationToken">
+        /// Optional <see cref="CancellationToken"/> to propagate
+        /// notifications that the operation should be cancelled.
+        /// </param>
+        /// <returns>
+        /// A <see cref="Response{PageRangesInfo}"/> describing the
+        /// valid page ranges for this blob.
+        /// </returns>
+        /// <remarks>
+        /// A <see cref="RequestFailedException"/> will be thrown if
+        /// a failure occurs.
+        /// </remarks>
+        public virtual Response<PageRangesInfo> GetManagedDiskPageRangesDiff(
+            HttpRange? range = default,
+            string snapshot = default,
+            Uri previousSnapshotUri = default,
+            PageBlobRequestConditions conditions = default,
+            CancellationToken cancellationToken = default) =>
+            GetPageRangesDiffInternal(
+                range,
+                snapshot,
+                previousSnapshot: default,
+                previousSnapshotUri,
+                conditions,
+                async: false,
+                operationName: $"{nameof(PageBlobClient)}.{nameof(GetManagedDiskPageRangesDiff)}",
+                cancellationToken)
+                .EnsureCompleted();
+
+        /// <summary>
+        /// The <see cref="GetManagedDiskPageRangesDiffAsync"/>
+        /// operation returns the list of page ranges that differ between a
+        /// <paramref name="previousSnapshotUri"/> and this page blob. Changed pages
+        /// include both updated and cleared pages.  This API only works with
+        /// managed disk storage accounts.
+        ///
+        /// For more information, see <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/get-page-ranges" />.
+        /// </summary>
+        /// <param name="range">
+        /// Optionally specifies the range of bytes over which to list ranges,
+        /// inclusively. If omitted, then all ranges for the blob are returned.
+        /// </param>
+        /// <param name="snapshot">
+        /// Optionally specifies the blob snapshot to retrieve page ranges
+        /// information from. For more information on working with blob snapshots,
+        /// <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/creating-a-snapshot-of-a-blob"/>.
+        /// </param>
+        /// <param name="previousSnapshotUri">
+        /// This parameter only works with managed disk storage accounts.
+        /// Specifies that the response will contain only pages that were
+        /// changed between target blob and previous snapshot.  Changed pages
+        /// include both updated and cleared pages. The target blob may be a
+        /// snapshot, as long as the snapshot specified by
+        /// <paramref name="previousSnapshotUri"/> is the older of the two.
+        /// </param>
+        /// <param name="conditions">
+        /// Optional <see cref="PageBlobRequestConditions"/> to add
+        /// conditions on getting page ranges for the this blob.
+        /// </param>
+        /// <param name="cancellationToken">
+        /// Optional <see cref="CancellationToken"/> to propagate
+        /// notifications that the operation should be cancelled.
+        /// </param>
+        /// <returns>
+        /// A <see cref="Response{PageRangesInfo}"/> describing the
+        /// valid page ranges for this blob.
+        /// </returns>
+        /// <remarks>
+        /// A <see cref="RequestFailedException"/> will be thrown if
+        /// a failure occurs.
+        /// </remarks>
+        public virtual async Task<Response<PageRangesInfo>> GetManagedDiskPageRangesDiffAsync(
+            HttpRange? range = default,
+            string snapshot = default,
+            Uri previousSnapshotUri = default,
+            PageBlobRequestConditions conditions = default,
+            CancellationToken cancellationToken = default) =>
+            await GetPageRangesDiffInternal(
+                range,
+                snapshot,
+                previousSnapshot: default,
+                previousSnapshotUri,
+                conditions,
+                async: true,
+                operationName: $"{nameof(PageBlobClient)}.{nameof(GetManagedDiskPageRangesDiff)}",
+                cancellationToken)
+                .ConfigureAwait(false);
+
+        #endregion GetManagedDiskPageRangesDiff
 
         #region Resize
         /// <summary>
@@ -1558,6 +1702,7 @@ namespace Azure.Storage.Blobs.Specialized
                         encryptionKey: CustomerProvidedKey?.EncryptionKey,
                         encryptionKeySha256: CustomerProvidedKey?.EncryptionKeyHash,
                         encryptionAlgorithm: CustomerProvidedKey?.EncryptionAlgorithm,
+                        encryptionScope: EncryptionScope,
                         ifModifiedSince: conditions?.IfModifiedSince,
                         ifUnmodifiedSince: conditions?.IfUnmodifiedSince,
                         ifMatch: conditions?.IfMatch,
@@ -1873,7 +2018,8 @@ namespace Azure.Storage.Blobs.Specialized
         ///
         /// The additional storage space consumed by the copied snapshot is
         /// the size of the differential data transferred during the copy.
-        /// This can be determined by performing a <see cref="GetPageRangesDiff"/>
+        /// This can be determined by performing a
+        /// <see cref="GetPageRangesDiff"/>
         /// call on the snapshot to compare it to the previous snapshot.
         /// </remarks>
         public virtual CopyFromUriOperation StartCopyIncremental(
@@ -1978,7 +2124,8 @@ namespace Azure.Storage.Blobs.Specialized
         ///
         /// The additional storage space consumed by the copied snapshot is
         /// the size of the differential data transferred during the copy.
-        /// This can be determined by performing a <see cref="GetPageRangesDiffAsync"/>
+        /// This can be determined by performing a
+        /// <see cref="GetPageRangesDiffAsync"/>
         /// call on the snapshot to compare it to the previous snapshot.
         /// </remarks>
         public virtual async Task<CopyFromUriOperation> StartCopyIncrementalAsync(
@@ -2087,7 +2234,8 @@ namespace Azure.Storage.Blobs.Specialized
         ///
         /// The additional storage space consumed by the copied snapshot is
         /// the size of the differential data transferred during the copy.
-        /// This can be determined by performing a <see cref="GetPageRangesDiffAsync"/>
+        /// This can be determined by performing a
+        /// <see cref="GetPageRangesDiffInternal"/>
         /// call on the snapshot to compare it to the previous snapshot.
         /// </remarks>
         private async Task<Response<BlobCopyInfo>> StartCopyIncrementalInternal(
@@ -2381,6 +2529,7 @@ namespace Azure.Storage.Blobs.Specialized
                         encryptionKey: CustomerProvidedKey?.EncryptionKey,
                         encryptionKeySha256: CustomerProvidedKey?.EncryptionKeyHash,
                         encryptionAlgorithm: CustomerProvidedKey?.EncryptionAlgorithm,
+                        encryptionScope: EncryptionScope,
                         range: range.ToString(),
                         leaseId: conditions?.LeaseId,
                         ifSequenceNumberLessThanOrEqualTo: conditions?.IfSequenceNumberLessThanOrEqual,

@@ -94,6 +94,16 @@ namespace Azure.Storage.Blobs
         internal virtual CustomerProvidedKey? CustomerProvidedKey => _customerProvidedKey;
 
         /// <summary>
+        /// The name of the Encryption Scope to be used when sending request.
+        /// </summary>
+        internal readonly string _encryptionScope;
+
+        /// <summary>
+        /// The name of the Encryption Scope to be used when sending request.
+        /// </summary>
+        internal virtual string EncryptionScope => _encryptionScope;
+
+        /// <summary>
         /// The Storage account name corresponding to the service client.
         /// </summary>
         private string _accountName;
@@ -296,6 +306,8 @@ namespace Azure.Storage.Blobs
             _version = options.Version;
             _clientDiagnostics = new ClientDiagnostics(options);
             _customerProvidedKey = options.CustomerProvidedKey;
+            _encryptionScope = options.EncryptionScope;
+            BlobErrors.VerifyCpkAndEncryptionScopeNotBothSet(_customerProvidedKey, _encryptionScope);
             BlobErrors.VerifyHttpsCustomerProvidedKey(_uri, _customerProvidedKey);
         }
 
@@ -322,7 +334,11 @@ namespace Azure.Storage.Blobs
         /// <returns>
         /// New instanc of the <see cref="BlobServiceClient"/> class.
         /// </returns>
-        protected static BlobServiceClient CreateClient(Uri serviceUri, BlobClientOptions options, HttpPipelinePolicy authentication, HttpPipeline pipeline)
+        protected static BlobServiceClient CreateClient(
+            Uri serviceUri,
+            BlobClientOptions options,
+            HttpPipelinePolicy authentication,
+            HttpPipeline pipeline)
         {
             /* This method only exists for the DataLake client to have an internal container client. We don't have to
              * worry about having a paper trail to the client, so we don't care that we pass the fake client options
