@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Azure.Core;
 using Azure.Core.Pipeline;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Sas;
 using Metadata = System.Collections.Generic.IDictionary<string, string>;
 
 namespace Azure.Storage.Blobs
@@ -348,6 +349,25 @@ namespace Azure.Storage.Blobs
         /// </returns>
         public virtual BlobContainerClient GetBlobContainerClient(string blobContainerName) =>
             new BlobContainerClient(Uri.AppendToPath(blobContainerName), Pipeline, Version, ClientDiagnostics, CustomerProvidedKey, EncryptionScope);
+
+        /// <summary>
+        /// Creates a shared access signature (SAS) token targeting the same account as this client, authenticating
+        /// the SAS with this client's stored <see cref="StorageSharedKeyCredential"/>.
+        ///
+        /// For more information, see
+        /// <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/delegate-access-with-shared-access-signature"/>.
+        /// and
+        /// <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/create-account-sas"/>
+        /// </summary>
+        /// <param name="blobSasSignatureValues">The values to construct the SAS with.</param>
+        /// <returns>The URI query string representing the SAS token, WITHOUT a prepended "?".</returns>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when this client is not authenticated with a <see cref="StorageSharedKeyCredential"/>.
+        /// </exception>
+#pragma warning disable CA1801, CA1822 // dev supression for stub API review
+        public string GenerateSas(AccountSasSignatureValues blobSasSignatureValues)
+            => throw new NotImplementedException();
+#pragma warning disable CA1801, CA1822 // dev supression for stub API review
 
         #region protected static accessors for Azure.Storage.Blobs.Batch
         /// <summary>

@@ -84,5 +84,8 @@ namespace Azure.Storage
                 throw new ArgumentException("Cannot use TokenCredential without HTTPS.");
             }
         }
+
+        public static InvalidOperationException UserDelegationSasWithIdentifier()
+            => new InvalidOperationException("Cannot use a stored access policy with a user delegation SAS.");
     }
 }

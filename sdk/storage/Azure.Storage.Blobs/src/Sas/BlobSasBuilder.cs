@@ -15,6 +15,7 @@ namespace Azure.Storage.Sas
     /// Signature (SAS) for an Azure Storage container or blob.
     /// For more information, see <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-a-service-sas" />.
     /// </summary>
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public class BlobSasBuilder
     {
         /// <summary>

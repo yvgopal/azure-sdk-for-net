@@ -12,6 +12,7 @@ namespace Azure.Storage.Sas
     /// For more information, see
     /// <see href="https://docs.microsoft.com/rest/api/storageservices/constructing-an-account-sas" />.
     /// </summary>
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public class AccountSasBuilder
     {
         /// <summary>

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -18,6 +19,7 @@ namespace Azure.Storage.Sas
     /// using the service specific SAS builder types.
     /// For more information, <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-a-service-sas"/>.
     /// </summary>
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public partial class SasQueryParameters
     {
         /// <summary>
