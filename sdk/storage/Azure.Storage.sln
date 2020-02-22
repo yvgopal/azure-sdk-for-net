@@ -113,6 +113,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Storage.Blobs.Batch.T
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ApiCompat", "..\..\eng\ApiCompat\ApiCompat.csproj", "{16260507-C87E-44D2-883F-8E338B7A519F}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Storage.ChangeFeed", "Azure.Storage.ChangeFeed\src\Azure.Storage.ChangeFeed.csproj", "{CB3EC127-E387-4C54-B581-A696AF086121}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Storage.ChangeFeed.Tests", "Azure.Storage.ChangeFeed\tests\Azure.Storage.ChangeFeed.Tests.csproj", "{B16ED2E0-3121-48A9-835E-EF95C24F0911}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Storage.ChangeFeed.Samples.Tests", "Azure.Storage.ChangeFeed\samples\Azure.Storage.ChangeFeed.Samples.Tests.csproj", "{A134317C-3B97-434E-AC72-EF713750CCF0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -203,6 +209,18 @@ Global
 		{16260507-C87E-44D2-883F-8E338B7A519F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{16260507-C87E-44D2-883F-8E338B7A519F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{16260507-C87E-44D2-883F-8E338B7A519F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CB3EC127-E387-4C54-B581-A696AF086121}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB3EC127-E387-4C54-B581-A696AF086121}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CB3EC127-E387-4C54-B581-A696AF086121}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CB3EC127-E387-4C54-B581-A696AF086121}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B16ED2E0-3121-48A9-835E-EF95C24F0911}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B16ED2E0-3121-48A9-835E-EF95C24F0911}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B16ED2E0-3121-48A9-835E-EF95C24F0911}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B16ED2E0-3121-48A9-835E-EF95C24F0911}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A134317C-3B97-434E-AC72-EF713750CCF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A134317C-3B97-434E-AC72-EF713750CCF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A134317C-3B97-434E-AC72-EF713750CCF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A134317C-3B97-434E-AC72-EF713750CCF0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
