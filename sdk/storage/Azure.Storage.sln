@@ -113,6 +113,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Storage.Blobs.Batch.T
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ApiCompat", "..\..\eng\ApiCompat\ApiCompat.csproj", "{16260507-C87E-44D2-883F-8E338B7A519F}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Storage.QuickQuery", "Azure.Storage.QuickQuery\src\Azure.Storage.QuickQuery.csproj", "{C114DCDA-2956-492E-8BD3-6309EBAB83A5}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Storage.QuickQuery.Tests", "Azure.Storage.QuickQuery\tests\Azure.Storage.QuickQuery.Tests.csproj", "{8761030F-39D1-4C74-ADDD-9B300DB3D043}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Storage.QuickQuery.Samples.Tests", "Azure.Storage.QuickQuery\samples\Azure.Storage.QuickQuery.Samples.Tests.csproj", "{EA0BD015-B840-410B-A34C-3AD09582BD8A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -203,6 +209,18 @@ Global
 		{16260507-C87E-44D2-883F-8E338B7A519F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{16260507-C87E-44D2-883F-8E338B7A519F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{16260507-C87E-44D2-883F-8E338B7A519F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C114DCDA-2956-492E-8BD3-6309EBAB83A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C114DCDA-2956-492E-8BD3-6309EBAB83A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C114DCDA-2956-492E-8BD3-6309EBAB83A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C114DCDA-2956-492E-8BD3-6309EBAB83A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8761030F-39D1-4C74-ADDD-9B300DB3D043}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8761030F-39D1-4C74-ADDD-9B300DB3D043}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8761030F-39D1-4C74-ADDD-9B300DB3D043}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8761030F-39D1-4C74-ADDD-9B300DB3D043}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA0BD015-B840-410B-A34C-3AD09582BD8A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA0BD015-B840-410B-A34C-3AD09582BD8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA0BD015-B840-410B-A34C-3AD09582BD8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA0BD015-B840-410B-A34C-3AD09582BD8A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
