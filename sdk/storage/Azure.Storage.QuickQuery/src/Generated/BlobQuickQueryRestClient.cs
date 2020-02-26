@@ -14,7 +14,7 @@ namespace Azure.Storage.QuickQuery
     /// <summary>
     /// Azure Blob Storage
     /// </summary>
-    internal static partial class QuickQueryRestClient
+    internal static partial class BlobQuickQueryRestClient
     {
         #region Blob operations
         /// <summary>
@@ -178,7 +178,7 @@ namespace Azure.Storage.QuickQuery
                 if (leaseId != null) { _request.Headers.SetValue("x-ms-lease-id", leaseId); }
                 if (encryptionKey != null) { _request.Headers.SetValue("x-ms-encryption-key", encryptionKey); }
                 if (encryptionKeySha256 != null) { _request.Headers.SetValue("x-ms-encryption-key-sha256", encryptionKeySha256); }
-                if (encryptionAlgorithm != null) { _request.Headers.SetValue("x-ms-encryption-algorithm", Azure.Storage.QuickQuery.QuickQueryRestClient.Serialization.ToString(encryptionAlgorithm.Value)); }
+                if (encryptionAlgorithm != null) { _request.Headers.SetValue("x-ms-encryption-algorithm", Azure.Storage.QuickQuery.BlobQuickQueryRestClient.Serialization.ToString(encryptionAlgorithm.Value)); }
                 if (ifModifiedSince != null) { _request.Headers.SetValue("If-Modified-Since", ifModifiedSince.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture)); }
                 if (ifUnmodifiedSince != null) { _request.Headers.SetValue("If-Unmodified-Since", ifUnmodifiedSince.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture)); }
                 if (ifMatch != null) { _request.Headers.SetValue("If-Match", ifMatch.Value.ToString()); }
@@ -297,19 +297,19 @@ namespace Azure.Storage.QuickQuery
                         }
                         if (response.Headers.TryGetValue("x-ms-copy-status", out _header))
                         {
-                            _value.CopyStatus = Azure.Storage.QuickQuery.QuickQueryRestClient.Serialization.ParseCopyStatusType(_header);
+                            _value.CopyStatus = Azure.Storage.QuickQuery.BlobQuickQueryRestClient.Serialization.ParseCopyStatusType(_header);
                         }
                         if (response.Headers.TryGetValue("x-ms-lease-duration", out _header))
                         {
-                            _value.LeaseDuration = Azure.Storage.QuickQuery.QuickQueryRestClient.Serialization.ParseLeaseDurationType(_header);
+                            _value.LeaseDuration = Azure.Storage.QuickQuery.BlobQuickQueryRestClient.Serialization.ParseLeaseDurationType(_header);
                         }
                         if (response.Headers.TryGetValue("x-ms-lease-state", out _header))
                         {
-                            _value.LeaseState = Azure.Storage.QuickQuery.QuickQueryRestClient.Serialization.ParseLeaseStateType(_header);
+                            _value.LeaseState = Azure.Storage.QuickQuery.BlobQuickQueryRestClient.Serialization.ParseLeaseStateType(_header);
                         }
                         if (response.Headers.TryGetValue("x-ms-lease-status", out _header))
                         {
-                            _value.LeaseStatus = Azure.Storage.QuickQuery.QuickQueryRestClient.Serialization.ParseLeaseStatusType(_header);
+                            _value.LeaseStatus = Azure.Storage.QuickQuery.BlobQuickQueryRestClient.Serialization.ParseLeaseStatusType(_header);
                         }
                         if (response.Headers.TryGetValue("Accept-Ranges", out _header))
                         {
@@ -429,19 +429,19 @@ namespace Azure.Storage.QuickQuery
                         }
                         if (response.Headers.TryGetValue("x-ms-copy-status", out _header))
                         {
-                            _value.CopyStatus = Azure.Storage.QuickQuery.QuickQueryRestClient.Serialization.ParseCopyStatusType(_header);
+                            _value.CopyStatus = Azure.Storage.QuickQuery.BlobQuickQueryRestClient.Serialization.ParseCopyStatusType(_header);
                         }
                         if (response.Headers.TryGetValue("x-ms-lease-duration", out _header))
                         {
-                            _value.LeaseDuration = Azure.Storage.QuickQuery.QuickQueryRestClient.Serialization.ParseLeaseDurationType(_header);
+                            _value.LeaseDuration = Azure.Storage.QuickQuery.BlobQuickQueryRestClient.Serialization.ParseLeaseDurationType(_header);
                         }
                         if (response.Headers.TryGetValue("x-ms-lease-state", out _header))
                         {
-                            _value.LeaseState = Azure.Storage.QuickQuery.QuickQueryRestClient.Serialization.ParseLeaseStateType(_header);
+                            _value.LeaseState = Azure.Storage.QuickQuery.BlobQuickQueryRestClient.Serialization.ParseLeaseStateType(_header);
                         }
                         if (response.Headers.TryGetValue("x-ms-lease-status", out _header))
                         {
-                            _value.LeaseStatus = Azure.Storage.QuickQuery.QuickQueryRestClient.Serialization.ParseLeaseStatusType(_header);
+                            _value.LeaseStatus = Azure.Storage.QuickQuery.BlobQuickQueryRestClient.Serialization.ParseLeaseStatusType(_header);
                         }
                         if (response.Headers.TryGetValue("Accept-Ranges", out _header))
                         {
@@ -495,7 +495,7 @@ namespace Azure.Storage.QuickQuery.Models
     /// <summary>
     /// Blob QuickQueryResult
     /// </summary>
-    internal partial class BlobQuickQueryResult
+    public partial class BlobQuickQueryResult
     {
         /// <summary>
         /// Returns the date and time the container was last modified. Any operation that modifies the blob, including an update of the blob's metadata or properties, changes the last-modified time of the blob.
@@ -661,6 +661,82 @@ namespace Azure.Storage.QuickQuery.Models
             Metadata = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase);
         }
     }
+
+    /// <summary>
+    /// QuickQueryModelFactory provides utilities for mocking.
+    /// </summary>
+    public static partial class QuickQueryModelFactory
+    {
+        /// <summary>
+        /// Creates a new BlobQuickQueryResult instance for mocking.
+        /// </summary>
+        public static BlobQuickQueryResult BlobQuickQueryResult(
+            System.DateTimeOffset lastModified,
+            long blobSequenceNumber,
+            Azure.Storage.QuickQuery.Models.BlobType blobType,
+            byte[] contentCrc64,
+            System.DateTimeOffset copyCompletionTime,
+            string contentLanguage,
+            string copyId,
+            string copyProgress,
+            string copySource,
+            Azure.Storage.QuickQuery.Models.CopyStatusType copyStatus,
+            Azure.Storage.QuickQuery.Models.LeaseDurationType leaseDuration,
+            string contentDisposition,
+            Azure.Storage.QuickQuery.Models.LeaseStateType leaseState,
+            string cacheControl,
+            Azure.Storage.QuickQuery.Models.LeaseStatusType leaseStatus,
+            string contentEncoding,
+            string acceptRanges,
+            byte[] contentMD5,
+            int blobCommittedBlockCount,
+            Azure.ETag eTag,
+            bool isServerEncrypted,
+            string contentRange,
+            string encryptionKeySha256,
+            string contentType,
+            string encryptionScope,
+            long contentLength,
+            byte[] blobContentMD5,
+            System.Collections.Generic.IDictionary<string, string> metadata,
+            System.IO.Stream body,
+            string copyStatusDescription)
+        {
+            return new BlobQuickQueryResult()
+            {
+                LastModified = lastModified,
+                BlobSequenceNumber = blobSequenceNumber,
+                BlobType = blobType,
+                ContentCrc64 = contentCrc64,
+                CopyCompletionTime = copyCompletionTime,
+                ContentLanguage = contentLanguage,
+                CopyId = copyId,
+                CopyProgress = copyProgress,
+                CopySource = copySource,
+                CopyStatus = copyStatus,
+                LeaseDuration = leaseDuration,
+                ContentDisposition = contentDisposition,
+                LeaseState = leaseState,
+                CacheControl = cacheControl,
+                LeaseStatus = leaseStatus,
+                ContentEncoding = contentEncoding,
+                AcceptRanges = acceptRanges,
+                ContentMD5 = contentMD5,
+                BlobCommittedBlockCount = blobCommittedBlockCount,
+                ETag = eTag,
+                IsServerEncrypted = isServerEncrypted,
+                ContentRange = contentRange,
+                EncryptionKeySha256 = encryptionKeySha256,
+                ContentType = contentType,
+                EncryptionScope = encryptionScope,
+                ContentLength = contentLength,
+                BlobContentMD5 = blobContentMD5,
+                Metadata = metadata,
+                Body = body,
+                CopyStatusDescription = copyStatusDescription,
+            };
+        }
+    }
 }
 #endregion class BlobQuickQueryResult
 
@@ -722,7 +798,7 @@ namespace Azure.Storage.QuickQuery.Models
 
 namespace Azure.Storage.QuickQuery
 {
-    internal static partial class QuickQueryRestClient
+    internal static partial class BlobQuickQueryRestClient
     {
         public static partial class Serialization
         {
@@ -785,7 +861,7 @@ namespace Azure.Storage.QuickQuery.Models
         /// <summary>
         /// has headers
         /// </summary>
-        public string HasHeaders { get; set; }
+        public bool HasHeaders { get; set; }
 
         /// <summary>
         /// Creates a new DelimitedTextConfigurationInternal instance
@@ -817,7 +893,9 @@ namespace Azure.Storage.QuickQuery.Models
                 value.EscapeChar));
             _element.Add(new System.Xml.Linq.XElement(
                 System.Xml.Linq.XName.Get("HasHeaders", ""),
-                value.HasHeaders));
+                #pragma warning disable CA1308 // Normalize strings to uppercase
+                value.HasHeaders.ToString(System.Globalization.CultureInfo.InvariantCulture).ToLowerInvariant()));
+                #pragma warning restore CA1308 // Normalize strings to uppercase
             return _element;
         }
     }
@@ -841,7 +919,7 @@ namespace Azure.Storage.QuickQuery.Models
 
 namespace Azure.Storage.QuickQuery
 {
-    internal static partial class QuickQueryRestClient
+    internal static partial class BlobQuickQueryRestClient
     {
         public static partial class Serialization
         {
@@ -927,7 +1005,7 @@ namespace Azure.Storage.QuickQuery.Models
 
 namespace Azure.Storage.QuickQuery
 {
-    internal static partial class QuickQueryRestClient
+    internal static partial class BlobQuickQueryRestClient
     {
         public static partial class Serialization
         {
@@ -992,7 +1070,7 @@ namespace Azure.Storage.QuickQuery.Models
 
 namespace Azure.Storage.QuickQuery
 {
-    internal static partial class QuickQueryRestClient
+    internal static partial class BlobQuickQueryRestClient
     {
         public static partial class Serialization
         {
@@ -1048,7 +1126,7 @@ namespace Azure.Storage.QuickQuery.Models
 
 namespace Azure.Storage.QuickQuery
 {
-    internal static partial class QuickQueryRestClient
+    internal static partial class BlobQuickQueryRestClient
     {
         public static partial class Serialization
         {
@@ -1189,7 +1267,7 @@ namespace Azure.Storage.QuickQuery.Models
             System.Xml.Linq.XElement _element = new System.Xml.Linq.XElement(System.Xml.Linq.XName.Get(name, ns));
             _element.Add(new System.Xml.Linq.XElement(
                 System.Xml.Linq.XName.Get("QuickQueryType", ""),
-                Azure.Storage.QuickQuery.QuickQueryRestClient.Serialization.ToString(value.QuickQueryType)));
+                Azure.Storage.QuickQuery.BlobQuickQueryRestClient.Serialization.ToString(value.QuickQueryType)));
             if (value.DelimitedTextConfiguration != null)
             {
                 _element.Add(Azure.Storage.QuickQuery.Models.DelimitedTextConfigurationInternal.ToXml(value.DelimitedTextConfiguration, "DelimitedTextConfiguration", ""));
@@ -1249,7 +1327,7 @@ namespace Azure.Storage.QuickQuery.Models
     /// <summary>
     /// the quick query type
     /// </summary>
-    public enum QuickQueryType
+    internal enum QuickQueryType
     {
         /// <summary>
         /// delimited
@@ -1265,7 +1343,7 @@ namespace Azure.Storage.QuickQuery.Models
 
 namespace Azure.Storage.QuickQuery
 {
-    internal static partial class QuickQueryRestClient
+    internal static partial class BlobQuickQueryRestClient
     {
         public static partial class Serialization
         {

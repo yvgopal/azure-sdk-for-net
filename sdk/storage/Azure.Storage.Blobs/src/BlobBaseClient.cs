@@ -345,6 +345,42 @@ namespace Azure.Storage.Blobs.Specialized
         }
         #endregion ctors
 
+        #region protected static accessors for Azure.Storage.QuickQuery
+        /// <summary>
+        /// Get a <see cref="BlobBaseClient"/>'s <see cref="HttpPipeline"/>
+        /// for creating child clients.
+        /// </summary>
+        /// <param name="client">The BlobBaseClient.</param>
+        /// <returns>The BlobBaseClient's HttpPipeline.</returns>
+        protected static HttpPipeline GetHttpPipeline(BlobBaseClient client) =>
+            client.Pipeline;
+
+        /// <summary>
+        /// Get a <see cref="BlobBaseClient"/>'s <see cref="BlobClientOptions"/>
+        /// for creating child clients.
+        /// </summary>
+        /// <param name="client">The BlobBaseClient.</param>
+        /// <returns>The BlobBaseClient's BlobClientOptions.</returns>
+        protected static BlobClientOptions GetClientOptions(BlobBaseClient client) =>
+            new BlobClientOptions(client.Version)
+            {
+                // We only use this for communicating diagnostics, at the moment
+                Diagnostics =
+                {
+                    IsDistributedTracingEnabled = client.ClientDiagnostics.IsActivityEnabled
+                }
+            };
+
+        /// <summary>
+        /// Gets a <see cref="BlobBaseClient"/>'s <see cref="CustomerProvidedKey"/>
+        /// for creating child clients.
+        /// </summary>
+        /// <param name="client">The BlobBaseClient.</param>
+        /// <returns>The BlobBaseClient's CustomerProvidedKey.</returns>
+        protected static CustomerProvidedKey? GetCustomerProvidedKey(BlobBaseClient client) =>
+            client.CustomerProvidedKey;
+        #endregion protected static accessors for Azure.Storage.QuickQuery
+
         /// <summary>
         /// Initializes a new instance of the <see cref="BlobBaseClient"/>
         /// class with an identical <see cref="Uri"/> source but the specified

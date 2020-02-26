@@ -26,5 +26,10 @@ namespace Azure.Storage.QuickQuery.Models
         /// Escape character.
         /// </summary>
         public char EscapeCharacter { get; set; }
+
+        /// <summary>
+        /// Has headers.
+        /// </summary>
+        public bool HasHeaders { get; set; }
     }
 }

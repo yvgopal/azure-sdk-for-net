@@ -25,7 +25,7 @@ directive:
   where: $.info["x-ms-code-generation-settings"]
   transform: >
     $.namespace = "Azure.Storage.QuickQuery";
-    $["client-name"] = "QuickQueryRestClient";
+    $["client-name"] = "BlobQuickQueryRestClient";
     $["client-extensions-name"] = "QuickQueryExtensions";
     $["client-model-factory-name"] = "QuickQueryModelFactory";
     $["x-az-skip-path-components"] = true;
@@ -154,7 +154,9 @@ directive:
   where: $["x-ms-paths"]["/{containerName}/{blob}?comp=query"]
   transform: >
     $.post.responses["200"]["x-az-public"] = false;
+    $.post.responses["200"]["x-ms-copy-status"]["x-ms-enum"]["x-az-public"] = false;
     $.post.responses["206"]["x-az-public"] = false;
+    $.post.responses["206"]["x-ms-copy-status"]["x-ms-enum"]["x-az-public"] = false;
 ```
 
 ### Hide QueryRequest
@@ -202,6 +204,15 @@ directive:
   transform: >
     $["x-az-public"] = false;
     $["x-ms-client-name"] = "DelimitedTextConfigurationInternal";
+```
+
+### Hide QuickQueryType
+``` yaml
+directive:
+- from: swagger-document
+  where: definitions.QuickQueryType
+  transform: >
+    $["x-az-public"] = false;
 ```
 
 ### Hide Error models

@@ -293,6 +293,20 @@ namespace Azure.Storage
         }
 
         /// <summary>
+        /// Quick Query constant values.
+        /// </summary>
+        internal static class QuickQuery
+        {
+            public const string SqlQueryType = "SQL";
+
+            internal static class Errors
+            {
+                public const string InvalidTextConfigurationType
+                    = "Invalid text configuration type.  Must be CvsTextConfiguration or JsonTextConfiguration.";
+            }
+        }
+
+        /// <summary>
         /// Sas constant values.
         /// </summary>
         internal static class Sas

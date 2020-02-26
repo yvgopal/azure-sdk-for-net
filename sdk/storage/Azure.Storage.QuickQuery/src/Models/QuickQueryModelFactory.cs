@@ -10,7 +10,7 @@ namespace Azure.Storage.QuickQuery.Models
     /// <summary>
     /// QuickQueryModelFactory provides utilities for mocking.
     /// </summary>
-    public static class QuickQueryModelFactory
+    public static partial class QuickQueryModelFactory
     {
         #region BlobQueryError
         /// <summary>
