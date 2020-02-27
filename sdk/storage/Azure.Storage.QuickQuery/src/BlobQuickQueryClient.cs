@@ -3,9 +3,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Avro.File;
+using Avro.Generic;
 using Azure.Core;
 using Azure.Core.Pipeline;
 using Azure.Storage.Blobs;
@@ -275,11 +278,9 @@ namespace Azure.Storage.QuickQuery
             string query,
             BlobQueryTextConfiguration inputTextConfiguration,
             BlobQueryTextConfiguration outputTextConfiguration,
-#pragma warning disable CA1801 // Unused parameter
             IBlobQueryErrorReceiver nonFatalErrorReceiver,
             BlobRequestConditions conditions,
             IProgress<long> progressReceiver,
-#pragma warning restore CA1801 // Unused parameter
             bool async,
             CancellationToken cancellationToken)
         {
@@ -316,6 +317,10 @@ namespace Azure.Storage.QuickQuery
                         cancellationToken: cancellationToken)
 #pragma warning restore AZC0110 // DO NOT use await keyword in possibly synchronous scope.
                         .ConfigureAwait(false);
+
+                    Stream parsedStream = new BlobQuickQueryStream(result.Value.Body, progressReceiver, nonFatalErrorReceiver);
+                    result.Value.Body = parsedStream;
+
 
                     return Response.FromValue(result.Value.ToBlobDownloadInfo(), result.GetRawResponse());
                 }

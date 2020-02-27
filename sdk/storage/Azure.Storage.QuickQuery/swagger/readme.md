@@ -154,9 +154,7 @@ directive:
   where: $["x-ms-paths"]["/{containerName}/{blob}?comp=query"]
   transform: >
     $.post.responses["200"]["x-az-public"] = false;
-    $.post.responses["200"]["x-ms-copy-status"]["x-ms-enum"]["x-az-public"] = false;
     $.post.responses["206"]["x-az-public"] = false;
-    $.post.responses["206"]["x-ms-copy-status"]["x-ms-enum"]["x-az-public"] = false;
 ```
 
 ### Hide QueryRequest

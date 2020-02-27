@@ -45,6 +45,10 @@ namespace Azure.Storage.QuickQuery.Tests
             string query = @"SELECT _2 from BlobStorage WHERE _1 > 250;";
             Response<BlobDownloadInfo> response =  await queryClient.QueryAsync(query);
 
+            using StreamReader streamReader = new StreamReader(response.Value.Content);
+            string s = await streamReader.ReadToEndAsync();
+            Console.WriteLine(s);
+
             // Assert
             Assert.IsNotNull(response);
         }
