@@ -15,21 +15,21 @@ namespace Azure.Storage.QuickQuery.Models
         /// <summary>
         /// Column separator.
         /// </summary>
-        public string ColumnSeparator { get; set; }
+        public char? ColumnSeparator { get; set; }
 
         /// <summary>
         /// Field quote.
         /// </summary>
-        public string FieldQuote { get; set; }
+        public char? FieldQuote { get; set; }
 
         /// <summary>
         /// Escape character.
         /// </summary>
-        public char EscapeCharacter { get; set; }
+        public char? EscapeCharacter { get; set; }
 
         /// <summary>
         /// Has headers.
         /// </summary>
-        public bool HasHeaders { get; set; }
+        public bool HasHeaders { get; set;  }
     }
 }

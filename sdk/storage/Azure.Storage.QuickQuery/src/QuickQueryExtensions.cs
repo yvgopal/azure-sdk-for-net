@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Security;
 using System.Text;
 using Azure.Core.Pipeline;
 using Azure.Storage.Blobs;
@@ -48,26 +49,29 @@ namespace Azure.Storage.QuickQuery
                 Format = new QuickQueryFormat()
             };
 
+            serialization.Format.DelimitedTextConfiguration = default;
+            serialization.Format.JsonTextConfiguration = default;
+
             if (textConfiguration.GetType() == typeof(CvsTextConfiguration))
             {
                 CvsTextConfiguration cvsTextConfiguration = textConfiguration as CvsTextConfiguration;
-                serialization.Format.QuickQueryType = QuickQueryType.Delimited;
+                serialization.Format.Type = QuickQueryFormatType.Delimited;
                 serialization.Format.DelimitedTextConfiguration = new DelimitedTextConfigurationInternal
                 {
-                    ColumnSeparator = cvsTextConfiguration.ColumnSeparator,
-                    FieldQuote = cvsTextConfiguration.FieldQuote,
-                    RecordSeparator = cvsTextConfiguration.RecordSeparator,
-                    EscapeChar = cvsTextConfiguration.EscapeCharacter.ToString(CultureInfo.InvariantCulture),
+                    ColumnSeparator = cvsTextConfiguration.ColumnSeparator?.ToString(CultureInfo.InvariantCulture),
+                    FieldQuote = cvsTextConfiguration.FieldQuote?.ToString(CultureInfo.InvariantCulture),
+                    RecordSeparator = cvsTextConfiguration.RecordSeparator?.ToString(CultureInfo.InvariantCulture),
+                    EscapeChar = cvsTextConfiguration.EscapeCharacter?.ToString(CultureInfo.InvariantCulture),
                     HasHeaders = cvsTextConfiguration.HasHeaders
                 };
             }
             else if (textConfiguration.GetType() == typeof(JsonTextConfiguration))
             {
                 JsonTextConfiguration jsonTextConfiguration = textConfiguration as JsonTextConfiguration;
-                serialization.Format.QuickQueryType = QuickQueryType.Json;
+                serialization.Format.Type = QuickQueryFormatType.Json;
                 serialization.Format.JsonTextConfiguration = new JsonTextConfigurationInternal
                 {
-                    RecordSeparator = jsonTextConfiguration.RecordSeparator
+                    RecordSeparator = jsonTextConfiguration.RecordSeparator?.ToString(CultureInfo.InvariantCulture)
                 };
             }
             else

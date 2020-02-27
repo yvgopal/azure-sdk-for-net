@@ -495,7 +495,7 @@ namespace Azure.Storage.QuickQuery.Models
     /// <summary>
     /// Blob QuickQueryResult
     /// </summary>
-    public partial class BlobQuickQueryResult
+    internal partial class BlobQuickQueryResult
     {
         /// <summary>
         /// Returns the date and time the container was last modified. Any operation that modifies the blob, including an update of the blob's metadata or properties, changes the last-modified time of the blob.
@@ -659,82 +659,6 @@ namespace Azure.Storage.QuickQuery.Models
         public BlobQuickQueryResult()
         {
             Metadata = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase);
-        }
-    }
-
-    /// <summary>
-    /// QuickQueryModelFactory provides utilities for mocking.
-    /// </summary>
-    public static partial class QuickQueryModelFactory
-    {
-        /// <summary>
-        /// Creates a new BlobQuickQueryResult instance for mocking.
-        /// </summary>
-        public static BlobQuickQueryResult BlobQuickQueryResult(
-            System.DateTimeOffset lastModified,
-            long blobSequenceNumber,
-            Azure.Storage.QuickQuery.Models.BlobType blobType,
-            byte[] contentCrc64,
-            System.DateTimeOffset copyCompletionTime,
-            string contentLanguage,
-            string copyId,
-            string copyProgress,
-            string copySource,
-            Azure.Storage.QuickQuery.Models.CopyStatusType copyStatus,
-            Azure.Storage.QuickQuery.Models.LeaseDurationType leaseDuration,
-            string contentDisposition,
-            Azure.Storage.QuickQuery.Models.LeaseStateType leaseState,
-            string cacheControl,
-            Azure.Storage.QuickQuery.Models.LeaseStatusType leaseStatus,
-            string contentEncoding,
-            string acceptRanges,
-            byte[] contentMD5,
-            int blobCommittedBlockCount,
-            Azure.ETag eTag,
-            bool isServerEncrypted,
-            string contentRange,
-            string encryptionKeySha256,
-            string contentType,
-            string encryptionScope,
-            long contentLength,
-            byte[] blobContentMD5,
-            System.Collections.Generic.IDictionary<string, string> metadata,
-            System.IO.Stream body,
-            string copyStatusDescription)
-        {
-            return new BlobQuickQueryResult()
-            {
-                LastModified = lastModified,
-                BlobSequenceNumber = blobSequenceNumber,
-                BlobType = blobType,
-                ContentCrc64 = contentCrc64,
-                CopyCompletionTime = copyCompletionTime,
-                ContentLanguage = contentLanguage,
-                CopyId = copyId,
-                CopyProgress = copyProgress,
-                CopySource = copySource,
-                CopyStatus = copyStatus,
-                LeaseDuration = leaseDuration,
-                ContentDisposition = contentDisposition,
-                LeaseState = leaseState,
-                CacheControl = cacheControl,
-                LeaseStatus = leaseStatus,
-                ContentEncoding = contentEncoding,
-                AcceptRanges = acceptRanges,
-                ContentMD5 = contentMD5,
-                BlobCommittedBlockCount = blobCommittedBlockCount,
-                ETag = eTag,
-                IsServerEncrypted = isServerEncrypted,
-                ContentRange = contentRange,
-                EncryptionKeySha256 = encryptionKeySha256,
-                ContentType = contentType,
-                EncryptionScope = encryptionScope,
-                ContentLength = contentLength,
-                BlobContentMD5 = blobContentMD5,
-                Metadata = metadata,
-                Body = body,
-                CopyStatusDescription = copyStatusDescription,
-            };
         }
     }
 }
@@ -1231,9 +1155,9 @@ namespace Azure.Storage.QuickQuery.Models
     internal partial class QuickQueryFormat
     {
         /// <summary>
-        /// the quick query type
+        /// The quick query format type.
         /// </summary>
-        public Azure.Storage.QuickQuery.Models.QuickQueryType QuickQueryType { get; set; }
+        public Azure.Storage.QuickQuery.Models.QuickQueryFormatType? Type { get; set; }
 
         /// <summary>
         /// delimited text configuration
@@ -1265,9 +1189,12 @@ namespace Azure.Storage.QuickQuery.Models
         {
             System.Diagnostics.Debug.Assert(value != null);
             System.Xml.Linq.XElement _element = new System.Xml.Linq.XElement(System.Xml.Linq.XName.Get(name, ns));
-            _element.Add(new System.Xml.Linq.XElement(
-                System.Xml.Linq.XName.Get("QuickQueryType", ""),
-                Azure.Storage.QuickQuery.BlobQuickQueryRestClient.Serialization.ToString(value.QuickQueryType)));
+            if (value.Type != null)
+            {
+                _element.Add(new System.Xml.Linq.XElement(
+                    System.Xml.Linq.XName.Get("Type", ""),
+                    Azure.Storage.QuickQuery.BlobQuickQueryRestClient.Serialization.ToString(value.Type.Value)));
+            }
             if (value.DelimitedTextConfiguration != null)
             {
                 _element.Add(Azure.Storage.QuickQuery.Models.DelimitedTextConfigurationInternal.ToXml(value.DelimitedTextConfiguration, "DelimitedTextConfiguration", ""));
@@ -1281,6 +1208,56 @@ namespace Azure.Storage.QuickQuery.Models
     }
 }
 #endregion class QuickQueryFormat
+
+#region enum QuickQueryFormatType
+namespace Azure.Storage.QuickQuery.Models
+{
+    /// <summary>
+    /// The quick query format type.
+    /// </summary>
+    internal enum QuickQueryFormatType
+    {
+        /// <summary>
+        /// delimited
+        /// </summary>
+        Delimited,
+
+        /// <summary>
+        /// json
+        /// </summary>
+        Json
+    }
+}
+
+namespace Azure.Storage.QuickQuery
+{
+    internal static partial class BlobQuickQueryRestClient
+    {
+        public static partial class Serialization
+        {
+            public static string ToString(Azure.Storage.QuickQuery.Models.QuickQueryFormatType value)
+            {
+                return value switch
+                {
+                    Azure.Storage.QuickQuery.Models.QuickQueryFormatType.Delimited => "delimited",
+                    Azure.Storage.QuickQuery.Models.QuickQueryFormatType.Json => "json",
+                    _ => throw new System.ArgumentOutOfRangeException(nameof(value), value, "Unknown Azure.Storage.QuickQuery.Models.QuickQueryFormatType value.")
+                };
+            }
+
+            public static Azure.Storage.QuickQuery.Models.QuickQueryFormatType ParseQuickQueryFormatType(string value)
+            {
+                return value switch
+                {
+                    "delimited" => Azure.Storage.QuickQuery.Models.QuickQueryFormatType.Delimited,
+                    "json" => Azure.Storage.QuickQuery.Models.QuickQueryFormatType.Json,
+                    _ => throw new System.ArgumentOutOfRangeException(nameof(value), value, "Unknown Azure.Storage.QuickQuery.Models.QuickQueryFormatType value.")
+                };
+            }
+        }
+    }
+}
+#endregion enum QuickQueryFormatType
 
 #region class QuickQuerySerialization
 namespace Azure.Storage.QuickQuery.Models
@@ -1320,56 +1297,6 @@ namespace Azure.Storage.QuickQuery.Models
     }
 }
 #endregion class QuickQuerySerialization
-
-#region enum QuickQueryType
-namespace Azure.Storage.QuickQuery.Models
-{
-    /// <summary>
-    /// the quick query type
-    /// </summary>
-    internal enum QuickQueryType
-    {
-        /// <summary>
-        /// delimited
-        /// </summary>
-        Delimited,
-
-        /// <summary>
-        /// json
-        /// </summary>
-        Json
-    }
-}
-
-namespace Azure.Storage.QuickQuery
-{
-    internal static partial class BlobQuickQueryRestClient
-    {
-        public static partial class Serialization
-        {
-            public static string ToString(Azure.Storage.QuickQuery.Models.QuickQueryType value)
-            {
-                return value switch
-                {
-                    Azure.Storage.QuickQuery.Models.QuickQueryType.Delimited => "delimited",
-                    Azure.Storage.QuickQuery.Models.QuickQueryType.Json => "json",
-                    _ => throw new System.ArgumentOutOfRangeException(nameof(value), value, "Unknown Azure.Storage.QuickQuery.Models.QuickQueryType value.")
-                };
-            }
-
-            public static Azure.Storage.QuickQuery.Models.QuickQueryType ParseQuickQueryType(string value)
-            {
-                return value switch
-                {
-                    "delimited" => Azure.Storage.QuickQuery.Models.QuickQueryType.Delimited,
-                    "json" => Azure.Storage.QuickQuery.Models.QuickQueryType.Json,
-                    _ => throw new System.ArgumentOutOfRangeException(nameof(value), value, "Unknown Azure.Storage.QuickQuery.Models.QuickQueryType value.")
-                };
-            }
-        }
-    }
-}
-#endregion enum QuickQueryType
 
 #region class StorageError
 namespace Azure.Storage.QuickQuery.Models
