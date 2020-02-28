@@ -111,46 +111,50 @@ namespace Azure.Storage.QuickQuery
                 return 0;
             }
 
-            // Get next Record.
-            //TODO in the future, this is where we will call the async version of this.
-            GenericRecord record = _avroReader.Next();
-
-            switch (record.Schema.Fullname)
+            // We need to keep getting the next record until we get a data record.
+            while (remainingBytes == 0)
             {
-                // Data Record
-                case Constants.QuickQuery.DataRecordName:
-                    record.TryGetValue(Constants.QuickQuery.Data, out object byteObject);
-                    byte[] bytes = (byte[])byteObject;
-                    Array.Copy(
-                        sourceArray: bytes,
-                        sourceIndex: 0,
-                        destinationArray: _buffer,
-                        destinationIndex: 0,
-                        length: bytes.Length);
+                // Get next Record.
+                //TODO in the future, this is where we will call the async version of this.
+                GenericRecord record = _avroReader.Next();
 
-                    _bufferLength = bytes.Length;
+                switch (record.Schema.Fullname)
+                {
+                    // Data Record
+                    case Constants.QuickQuery.DataRecordName:
+                        record.TryGetValue(Constants.QuickQuery.Data, out object byteObject);
+                        byte[] bytes = (byte[])byteObject;
+                        Array.Copy(
+                            sourceArray: bytes,
+                            sourceIndex: 0,
+                            destinationArray: _buffer,
+                            destinationIndex: 0,
+                            length: bytes.Length);
 
-                    // Don't remove this reset, it is used in the final array copy below.
-                    remainingBytes = bytes.Length;
-                    break;
+                        _bufferLength = bytes.Length;
 
-                // Progress Record
-                case Constants.QuickQuery.ProgressRecordName:
-                    if (_ProgressHandler != default)
-                    {
-                        record.TryGetValue(Constants.QuickQuery.BytesScanned, out object progress);
-                        _ProgressHandler.Report((long)progress);
-                    }
-                    break;
+                        // Don't remove this reset, it is used in the final array copy below.
+                        remainingBytes = bytes.Length;
+                        break;
 
-                // Error Record
-                case Constants.QuickQuery.ErrorRecordName:
-                    ProcessErrorRecord(record);
-                    break;
+                    // Progress Record
+                    case Constants.QuickQuery.ProgressRecordName:
+                        if (_ProgressHandler != default)
+                        {
+                            record.TryGetValue(Constants.QuickQuery.BytesScanned, out object progress);
+                            _ProgressHandler.Report((long)progress);
+                        }
+                        break;
 
-                // End Record
-                case Constants.QuickQuery.EndRecordName:
-                    return 0;
+                    // Error Record
+                    case Constants.QuickQuery.ErrorRecordName:
+                        ProcessErrorRecord(record);
+                        break;
+
+                    // End Record
+                    case Constants.QuickQuery.EndRecordName:
+                        return 0;
+                }
             }
 
             int length = Math.Min(count, remainingBytes);

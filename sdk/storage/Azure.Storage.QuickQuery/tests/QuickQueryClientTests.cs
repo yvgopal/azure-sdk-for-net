@@ -48,23 +48,38 @@ namespace Azure.Storage.QuickQuery.Tests
         //TODO mark this as ignore
         public async Task QueryAsync_Large()
         {
+            // Arrange
             await using DisposingContainer test = await GetTestContainerAsync();
             BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
             Stream stream = CreateDataStream(16 * Constants.MB);
             await blockBlobClient.UploadAsync(stream);
 
-            // Act
             BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
             string query = @"SELECT * from BlobStorage";
-            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(query);
+
+            // Act
+            TestProgress progressReporter = new TestProgress();
+            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(
+                query,
+                progressReceiver: progressReporter);
 
             stream.Seek(0, SeekOrigin.Begin);
-            using StreamReader streamReader = new StreamReader(stream);
-            string expected = await streamReader.ReadToEndAsync();
-            using StreamReader streamReader2 = new StreamReader(response.Value.Content);
-            string actual = await streamReader.ReadToEndAsync();
+            using StreamReader expectedStreamReader = new StreamReader(stream);
+            string expected = await expectedStreamReader.ReadToEndAsync();
 
+            using StreamReader actualStreamReader = new StreamReader(response.Value.Content);
+            string actual = await actualStreamReader.ReadToEndAsync();
+
+            // Assert
+            // Check we got back the same content that we uploaded.
             Assert.AreEqual(expected, actual);
+
+            // Check progress reporter
+            Assert.AreEqual(4, progressReporter.List.Count);
+            Assert.AreEqual(4 * Constants.MB, progressReporter.List[0]);
+            Assert.AreEqual(8 * Constants.MB, progressReporter.List[1]);
+            Assert.AreEqual(12 * Constants.MB, progressReporter.List[2]);
+            Assert.AreEqual(16 * Constants.MB, progressReporter.List[3]);
         }
 
         [Test]
