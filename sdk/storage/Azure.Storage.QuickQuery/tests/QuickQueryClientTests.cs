@@ -4,12 +4,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.Core.Testing;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
 using Azure.Storage.QuickQuery.Models;
+using Azure.Storage.Test;
 using NUnit.Framework;
 
 namespace Azure.Storage.QuickQuery.Tests
@@ -27,19 +29,8 @@ namespace Azure.Storage.QuickQuery.Tests
             // Arrange
             await using DisposingContainer test = await GetTestContainerAsync();
             BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
-
-            MemoryStream blobData = new MemoryStream();
-            byte[] rowData = Encoding.UTF8.GetBytes("100,200,300,400\n300,400,500,600\n");
-            long blockLength = 0;
-            while (blockLength < 1024)
-            {
-                blobData.Write(rowData, 0, rowData.Length);
-                blockLength += rowData.Length;
-            }
-
-            blobData.Seek(0, SeekOrigin.Begin);
-
-            await blockBlobClient.UploadAsync(blobData);
+            Stream stream = CreateDataStream(Constants.KB);
+            await blockBlobClient.UploadAsync(stream);
 
             // Act
             BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
@@ -48,10 +39,57 @@ namespace Azure.Storage.QuickQuery.Tests
 
             using StreamReader streamReader = new StreamReader(response.Value.Content);
             string s = await streamReader.ReadToEndAsync();
-            Console.WriteLine(s);
 
             // Assert
-            Assert.IsNotNull(response);
+            Assert.AreEqual("400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n", s);
+        }
+
+        [Test]
+        //TODO mark this as ignore
+        public async Task QueryAsync_Large()
+        {
+            await using DisposingContainer test = await GetTestContainerAsync();
+            BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
+            Stream stream = CreateDataStream(16 * Constants.MB);
+            await blockBlobClient.UploadAsync(stream);
+
+            // Act
+            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
+            string query = @"SELECT * from BlobStorage";
+            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(query);
+
+            stream.Seek(0, SeekOrigin.Begin);
+            using StreamReader streamReader = new StreamReader(stream);
+            string expected = await streamReader.ReadToEndAsync();
+            using StreamReader streamReader2 = new StreamReader(response.Value.Content);
+            string actual = await streamReader.ReadToEndAsync();
+
+            Assert.AreEqual(expected, actual);
+        }
+
+        [Test]
+        public async Task QueryAsync_Progress()
+        {
+            // Arrange
+            await using DisposingContainer test = await GetTestContainerAsync();
+            BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
+            Stream stream = CreateDataStream(Constants.KB);
+            await blockBlobClient.UploadAsync(stream);
+
+            // Act
+            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
+            string query = @"SELECT _2 from BlobStorage WHERE _1 > 250;";
+            TestProgress progressReporter = new TestProgress();
+
+            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(
+                query,
+                progressReceiver: progressReporter);
+
+            using StreamReader streamReader = new StreamReader(response.Value.Content);
+            await streamReader.ReadToEndAsync();
+
+            Assert.AreEqual(1, progressReporter.List.Count);
+            Assert.AreEqual(Constants.KB, progressReporter.List[0]);
         }
 
         [Test]
@@ -61,42 +99,94 @@ namespace Azure.Storage.QuickQuery.Tests
             await using DisposingContainer test = await GetTestContainerAsync();
             BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
 
-            MemoryStream blobData = new MemoryStream();
+            byte[] data = Encoding.UTF8.GetBytes("100,pizza,300,400\n300,400,500,600\n");
+            using MemoryStream stream = new MemoryStream(data);
+            await blockBlobClient.UploadAsync(stream);
+
+            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
+            string query = @"SELECT _1 from BlobStorage WHERE _2 > 250;";
+
+            // Act - with no IBlobQueryErrorReceiver
+            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(query);
+            using StreamReader streamReader = new StreamReader(response.Value.Content);
+            string s = await streamReader.ReadToEndAsync();
+
+
+            // Act - with  IBlobQueryErrorReceiver
+            BlobQueryError expectedBlobQueryError = new BlobQueryError
+            {
+                IsFatal = false,
+                Name = "InvalidTypeConversion",
+                Description = "Invalid type conversion",
+                Position = 0
+            };
+
+            response = await queryClient.QueryAsync(
+                query,
+                nonFatalErrorReceiver: new NonFatalErrorReceiver(expectedBlobQueryError));
+            using StreamReader streamReader2 = new StreamReader(response.Value.Content);
+            s = await streamReader2.ReadToEndAsync();
+        }
+
+        [Test]
+        public async Task QueryAsync_FatalError()
+        {
+            // Arrange
+            await using DisposingContainer test = await GetTestContainerAsync();
+            BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
+            Stream stream = CreateDataStream(Constants.KB);
+            await blockBlobClient.UploadAsync(stream);
+
+            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
+            string query = @"SELECT * from BlobStorage;";
+            JsonTextConfiguration jsonTextConfiguration = new JsonTextConfiguration
+            {
+                RecordSeparator = '\n'
+            };
+
+            // Act
+            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(
+                query,
+                inputTextConfiguration: jsonTextConfiguration);
+
+            using StreamReader streamReader = new StreamReader(response.Value.Content);
+
+            TestHelper.AssertExpectedException<RequestFailedException>(
+                () => streamReader.ReadToEnd(),
+                new RequestFailedException("Fatal Quick Query Error\nName: ParseError\nDescription: Unexpected token ',' at [byte: 3]. Expecting tokens '{', or '['.\nPosition: 0"));
+        }
+
+        private Stream CreateDataStream(long size)
+        {
+            MemoryStream stream = new MemoryStream();
             byte[] rowData = Encoding.UTF8.GetBytes("100,200,300,400\n300,400,500,600\n");
             long blockLength = 0;
-            while (blockLength < 1024)
+            while (blockLength < size)
             {
-                blobData.Write(rowData, 0, rowData.Length);
+                stream.Write(rowData, 0, rowData.Length);
                 blockLength += rowData.Length;
             }
 
-            blobData.Seek(0, SeekOrigin.Begin);
-
-            await blockBlobClient.UploadAsync(blobData);
-
-            // Act
-            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
-            string query = @"SELECT * from BlobStorage;";
-            CvsTextConfiguration cvsTextConfiguration = new CvsTextConfiguration
-            {
-                ColumnSeparator = ',',
-                FieldQuote ='\"',
-                RecordSeparator = '\n',
-                EscapeCharacter = null,
-                HasHeaders = false
-            };
-
-            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(
-                query,
-                inputTextConfiguration: cvsTextConfiguration);
-
-            using StreamReader streamReader = new StreamReader(response.Value.Content);
-            string s = await streamReader.ReadToEndAsync();
-            Console.WriteLine(s);
-
-            // Assert
-            Assert.IsNotNull(response);
+            stream.Seek(0, SeekOrigin.Begin);
+            return stream;
         }
 
+        private class NonFatalErrorReceiver : IBlobQueryErrorReceiver
+        {
+            private readonly BlobQueryError _expectedBlobQueryError;
+
+            public NonFatalErrorReceiver(BlobQueryError expected)
+            {
+                _expectedBlobQueryError = expected;
+            }
+
+            public void ReportError(BlobQueryError blobQueryError)
+            {
+                Assert.IsFalse(blobQueryError.IsFatal);
+                Assert.AreEqual(_expectedBlobQueryError.Name, blobQueryError.Name);
+                Assert.AreEqual(_expectedBlobQueryError.Description, blobQueryError.Description);
+                Assert.AreEqual(_expectedBlobQueryError.Position, blobQueryError.Position);
+            }
+        }
     }
 }

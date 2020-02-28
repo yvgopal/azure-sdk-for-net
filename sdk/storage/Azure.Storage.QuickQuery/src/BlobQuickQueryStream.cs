@@ -214,7 +214,7 @@ namespace Azure.Storage.QuickQuery
             if ((bool)fatal)
             {
                 throw new RequestFailedException(
-                    $"Fatal Error\nName: {(string)name}\nDescription: {(string)description}\nPosition: {(long)position}");
+                    $"Fatal Quick Query Error\nName: {(string)name}\nDescription: {(string)description}\nPosition: {(long)position}");
             }
             else
             {
