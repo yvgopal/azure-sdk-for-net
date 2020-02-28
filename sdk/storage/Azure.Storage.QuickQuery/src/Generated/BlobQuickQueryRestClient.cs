@@ -474,8 +474,14 @@ namespace Azure.Storage.QuickQuery
                     default:
                     {
                         // Create the result
-                        System.Xml.Linq.XDocument _xml = System.Xml.Linq.XDocument.Load(response.ContentStream, System.Xml.Linq.LoadOptions.PreserveWhitespace);
-                        Azure.Storage.QuickQuery.Models.StorageError _value = Azure.Storage.QuickQuery.Models.StorageError.FromXml(_xml.Root);
+                        Azure.Storage.QuickQuery.Models.FailureNoContent _value = new Azure.Storage.QuickQuery.Models.FailureNoContent();
+
+                        // Get response headers
+                        string _header;
+                        if (response.Headers.TryGetValue("x-ms-error-code", out _header))
+                        {
+                            _value.ErrorCode = _header;
+                        }
 
                         throw _value.CreateException(clientDiagnostics, response);
                     }
@@ -868,6 +874,28 @@ namespace Azure.Storage.QuickQuery
     }
 }
 #endregion enum EncryptionAlgorithmType
+
+#region class FailureNoContent
+namespace Azure.Storage.QuickQuery.Models
+{
+    /// <summary>
+    /// FailureNoContent
+    /// </summary>
+    internal partial class FailureNoContent
+    {
+        /// <summary>
+        /// x-ms-error-code
+        /// </summary>
+        public string ErrorCode { get; internal set; }
+
+        /// <summary>
+        /// Prevent direct instantiation of FailureNoContent instances.
+        /// You can use QuickQueryModelFactory.FailureNoContent instead.
+        /// </summary>
+        internal FailureNoContent() { }
+    }
+}
+#endregion class FailureNoContent
 
 #region class JsonTextConfigurationInternal
 namespace Azure.Storage.QuickQuery.Models
@@ -1321,32 +1349,6 @@ namespace Azure.Storage.QuickQuery.Models
         /// You can use QuickQueryModelFactory.StorageError instead.
         /// </summary>
         internal StorageError() { }
-
-        /// <summary>
-        /// Deserializes XML into a new StorageError instance.
-        /// </summary>
-        /// <param name="element">The XML element to deserialize.</param>
-        /// <returns>A deserialized StorageError instance.</returns>
-        internal static Azure.Storage.QuickQuery.Models.StorageError FromXml(System.Xml.Linq.XElement element)
-        {
-            System.Diagnostics.Debug.Assert(element != null);
-            System.Xml.Linq.XElement _child;
-            Azure.Storage.QuickQuery.Models.StorageError _value = new Azure.Storage.QuickQuery.Models.StorageError();
-            _child = element.Element(System.Xml.Linq.XName.Get("Message", ""));
-            if (_child != null)
-            {
-                _value.Message = _child.Value;
-            }
-            _child = element.Element(System.Xml.Linq.XName.Get("Code", ""));
-            if (_child != null)
-            {
-                _value.Code = _child.Value;
-            }
-            CustomizeFromXml(element, _value);
-            return _value;
-        }
-
-        static partial void CustomizeFromXml(System.Xml.Linq.XElement element, Azure.Storage.QuickQuery.Models.StorageError value);
     }
 }
 #endregion class StorageError

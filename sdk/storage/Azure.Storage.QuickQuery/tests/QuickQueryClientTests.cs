@@ -23,6 +23,9 @@ namespace Azure.Storage.QuickQuery.Tests
         public QuickQueryClientTests(bool async, RecordedTestMode? mode = null)
             : base(async, mode) { }
 
+        public DateTimeOffset OldDate => Recording.Now.AddDays(-1);
+        public DateTimeOffset NewDate => Recording.Now.AddDays(1);
+
         [Test]
         public async Task QueryAsync_Min()
         {
@@ -42,6 +45,25 @@ namespace Azure.Storage.QuickQuery.Tests
 
             // Assert
             Assert.AreEqual("400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n", s);
+        }
+
+        [Test]
+        public async Task QueryAsync_Error()
+        {
+            // Arrange
+            await using DisposingContainer test = await GetTestContainerAsync();
+            BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
+
+            // Act
+            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
+            string query = @"SELECT _2 from BlobStorage WHERE _1 > 250;";
+
+            // Act
+            // Act
+            await TestHelper.AssertExpectedExceptionAsync<RequestFailedException>(
+                queryClient.QueryAsync(
+                    query),
+                e => Assert.AreEqual("BlobNotFound", e.ErrorCode));
         }
 
         [Test]
@@ -108,6 +130,45 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
+        public async Task QueryAsync_QueryTextConfigurations()
+        {
+            await using DisposingContainer test = await GetTestContainerAsync();
+            BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
+            Stream stream = CreateDataStream(Constants.KB);
+            await blockBlobClient.UploadAsync(stream);
+
+            // Act
+            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
+            string query = @"SELECT _2 from BlobStorage WHERE _1 > 250;";
+
+            CvsTextConfiguration cvsTextConfiguration = new CvsTextConfiguration
+            {
+                ColumnSeparator = ',',
+                FieldQuote = '"',
+                EscapeCharacter = '\\',
+                RecordSeparator = '\n',
+                HasHeaders = false
+            };
+
+            JsonTextConfiguration jsonTextConfiguration = new JsonTextConfiguration
+            {
+                RecordSeparator = '\n'
+            };
+
+            // Act
+            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(
+                query,
+                inputTextConfiguration: cvsTextConfiguration,
+                outputTextConfiguration: jsonTextConfiguration);
+
+            using StreamReader streamReader = new StreamReader(response.Value.Content);
+            string s = await streamReader.ReadToEndAsync();
+
+            // Assert
+            Assert.AreEqual("{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n{\"_1\":\"400\"}\n", s);
+        }
+
+        [Test]
         public async Task QueryAsync_NonFatalError()
         {
             // Arrange
@@ -171,6 +232,65 @@ namespace Azure.Storage.QuickQuery.Tests
                 new RequestFailedException("Fatal Quick Query Error\nName: ParseError\nDescription: Unexpected token ',' at [byte: 3]. Expecting tokens '{', or '['.\nPosition: 0"));
         }
 
+        [Test]
+        public async Task QueryAsync_AccessConditions()
+        {
+            var garbageLeaseId = GetGarbageLeaseId();
+            foreach (AccessConditionParameters parameters in AccessConditions_Data)
+            {
+                // Arrange
+                await using DisposingContainer test = await GetTestContainerAsync();
+                BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
+                Stream stream = CreateDataStream(Constants.KB);
+                await blockBlobClient.UploadAsync(stream);
+
+                parameters.Match = await SetupBlobMatchCondition(blockBlobClient, parameters.Match);
+                parameters.LeaseId = await SetupBlobLeaseCondition(blockBlobClient, parameters.LeaseId, garbageLeaseId);
+                BlobRequestConditions accessConditions = BuildAccessConditions(
+                    parameters: parameters,
+                    lease: true);
+
+                BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
+                string query = @"SELECT * from BlobStorage";
+
+                // Act
+                Response<BlobDownloadInfo> response = await queryClient.QueryAsync(
+                    query,
+                    conditions: accessConditions);
+
+                // Assert
+                Assert.IsNotNull(response.Value.Details.ETag);
+            }
+        }
+
+        [Test]
+        public async Task QueryAsync_AccessConditionsFail()
+        {
+            var garbageLeaseId = GetGarbageLeaseId();
+            foreach (AccessConditionParameters parameters in GetAccessConditionsFail_Data(garbageLeaseId))
+            {
+                // Arrange
+                await using DisposingContainer test = await GetTestContainerAsync();
+                BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
+                Stream stream = CreateDataStream(Constants.KB);
+                await blockBlobClient.UploadAsync(stream);
+
+                parameters.NoneMatch = await SetupBlobMatchCondition(blockBlobClient, parameters.NoneMatch);
+                BlobRequestConditions accessConditions = BuildAccessConditions(parameters);
+
+
+                BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
+                string query = @"SELECT * from BlobStorage";
+
+                // Act
+                await TestHelper.AssertExpectedExceptionAsync<RequestFailedException>(
+                    queryClient.QueryAsync(
+                        query,
+                        conditions: accessConditions),
+                    e => { });
+            }
+        }
+
         private Stream CreateDataStream(long size)
         {
             MemoryStream stream = new MemoryStream();
@@ -184,6 +304,58 @@ namespace Azure.Storage.QuickQuery.Tests
 
             stream.Seek(0, SeekOrigin.Begin);
             return stream;
+        }
+
+        public IEnumerable<AccessConditionParameters> AccessConditions_Data
+            => new[]
+            {
+                new AccessConditionParameters(),
+                new AccessConditionParameters { IfModifiedSince = OldDate },
+                new AccessConditionParameters { IfUnmodifiedSince = NewDate },
+                new AccessConditionParameters { Match = ReceivedETag },
+                new AccessConditionParameters { NoneMatch = GarbageETag },
+                new AccessConditionParameters { LeaseId = ReceivedLeaseId }
+            };
+
+        public IEnumerable<AccessConditionParameters> GetAccessConditionsFail_Data(string garbageLeaseId)
+            => new[]
+            {
+                new AccessConditionParameters { IfModifiedSince = NewDate },
+                new AccessConditionParameters { IfUnmodifiedSince = OldDate },
+                new AccessConditionParameters { Match = GarbageETag },
+                new AccessConditionParameters { NoneMatch = ReceivedETag },
+                new AccessConditionParameters { LeaseId = garbageLeaseId },
+             };
+
+        private RequestConditions BuildRequestConditions(
+            AccessConditionParameters parameters)
+            => new RequestConditions
+            {
+                IfModifiedSince = parameters.IfModifiedSince,
+                IfUnmodifiedSince = parameters.IfUnmodifiedSince,
+                IfMatch = parameters.Match != null ? new ETag(parameters.Match) : default(ETag?),
+                IfNoneMatch = parameters.NoneMatch != null ? new ETag(parameters.NoneMatch) : default(ETag?)
+            };
+
+        private BlobRequestConditions BuildAccessConditions(
+            AccessConditionParameters parameters,
+            bool lease = true)
+        {
+            var accessConditions = BuildRequestConditions(parameters).ToBlobRequestConditions();
+            if (lease)
+            {
+                accessConditions.LeaseId = parameters.LeaseId;
+            }
+            return accessConditions;
+        }
+
+        public class AccessConditionParameters
+        {
+            public DateTimeOffset? IfModifiedSince { get; set; }
+            public DateTimeOffset? IfUnmodifiedSince { get; set; }
+            public string Match { get; set; }
+            public string NoneMatch { get; set; }
+            public string LeaseId { get; set; }
         }
 
         private class NonFatalErrorReceiver : IBlobQueryErrorReceiver

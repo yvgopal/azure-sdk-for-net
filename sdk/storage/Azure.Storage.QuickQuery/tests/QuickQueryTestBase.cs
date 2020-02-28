@@ -8,6 +8,7 @@ using Azure.Core;
 using Azure.Core.Testing;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Blobs.Specialized;
 using Azure.Storage.Test;
 using Azure.Storage.Test.Shared;
 
@@ -15,6 +16,11 @@ namespace Azure.Storage.QuickQuery.Tests
 {
     public abstract class QuickQueryTestBase : StorageTestBase
     {
+        public readonly string ReceivedETag = "\"received\"";
+        public readonly string GarbageETag = "\"garbage\"";
+        public readonly string ReceivedLeaseId = "received";
+
+
         public QuickQueryTestBase(bool async) : this(async, null) { }
 
         public QuickQueryTestBase(bool async, RecordedTestMode? mode = null)
@@ -24,6 +30,7 @@ namespace Azure.Storage.QuickQuery.Tests
 
         public string GetNewContainerName() => $"test-container-{Recording.Random.NewGuid()}";
         public string GetNewBlobName() => $"test-blob-{Recording.Random.NewGuid()}";
+        public string GetGarbageLeaseId() => Recording.Random.NewGuid().ToString();
 
         public BlobClientOptions GetOptions(bool parallelRange = false)
         {
@@ -87,6 +94,31 @@ namespace Azure.Storage.QuickQuery.Tests
             BlobContainerClient container = InstrumentClient(service.GetBlobContainerClient(containerName));
             await container.CreateAsync(metadata: metadata, publicAccessType: publicAccessType.Value);
             return new DisposingContainer(container);
+        }
+
+        //TODO consider removing this.
+        public async Task<string> SetupBlobMatchCondition(BlockBlobClient blob, string match)
+        {
+            if (match == ReceivedETag)
+            {
+                Response<BlobProperties> headers = await blob.GetPropertiesAsync();
+                return headers.Value.ETag.ToString();
+            }
+            else
+            {
+                return match;
+            }
+        }
+
+        //TODO consider removing this.
+        public async Task<string> SetupBlobLeaseCondition(BlockBlobClient blob, string leaseId, string garbageLeaseId)
+        {
+            BlobLease lease = null;
+            if (leaseId == ReceivedLeaseId || leaseId == garbageLeaseId)
+            {
+                lease = await InstrumentClient(blob.GetBlobLeaseClient(Recording.Random.NewGuid().ToString())).AcquireAsync(BlobLeaseClient.InfiniteLeaseDuration);
+            }
+            return leaseId == ReceivedLeaseId ? lease.LeaseId : leaseId;
         }
 
         public class DisposingContainer : IAsyncDisposable

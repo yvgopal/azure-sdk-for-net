@@ -19,27 +19,6 @@ namespace Azure.Storage.QuickQuery.Models
         public IDictionary<string, string> AdditionalInformation { get; } = new Dictionary<string, string>();
 
         /// <summary>
-        /// Get any additional XML elements for the error.
-        /// </summary>
-        /// <param name="root">The XML element</param>
-        /// <param name="error">The StorageError</param>
-        static partial void CustomizeFromXml(XElement root, StorageError error)
-        {
-            foreach (XElement element in root.Elements())
-            {
-                switch (element.Name.LocalName)
-                {
-                    case Constants.Xml.Code:
-                    case Constants.Xml.Message:
-                        continue;
-                    default:
-                        error.AdditionalInformation[element.Name.LocalName] = element.Value;
-                        break;
-                }
-            }
-        }
-
-        /// <summary>
         /// Create an exception corresponding to the StorageError.
         /// </summary>
         /// <param name="clientDiagnostics">The <see cref="ClientDiagnostics"/> instance to use.</param>

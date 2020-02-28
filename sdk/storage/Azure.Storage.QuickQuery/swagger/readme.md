@@ -1,4 +1,4 @@
-# Blob Storage
+# Blob Quick Query
 > see https://aka.ms/autorest
 
 ## Configuration
@@ -89,6 +89,21 @@ directive:
     $["x-az-response-name"] = "StorageErrorResult";
     $["x-az-create-exception"] = true;
     $["x-az-public"] = false;
+```
+
+### /{containerName}/{blob}?comp=query
+``` yaml
+directive:
+- from: swagger-document
+  where: $["x-ms-paths"]["/{containerName}/{blob}?comp=query"]
+  transform: >
+    $.post.responses.default = {
+        "description": "Failure",
+        "x-az-response-name": "FailureNoContent",
+        "x-az-create-exception": true,
+        "x-az-public": false,
+        "headers": { "x-ms-error-code": { "x-ms-client-name": "ErrorCode", "type": "string" } }
+    };
 ```
 
 ### Delete all operations Quick Query
