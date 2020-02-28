@@ -2,9 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using Avro.File;
 using Avro.Generic;
 using Azure.Storage.QuickQuery.Models;
@@ -12,7 +10,7 @@ using Azure.Storage.QuickQuery.Models;
 namespace Azure.Storage.QuickQuery
 {
     /// <summary>
-    /// QuickQueryStream
+    /// QuickQueryStream.
     /// </summary>
     internal class BlobQuickQueryStream : Stream
     {
@@ -189,17 +187,17 @@ namespace Azure.Storage.QuickQuery
         {
             if (buffer == null)
             {
-                throw new ArgumentNullException($"{nameof(buffer)} cannot be null.");
+                throw new ArgumentNullException($"{nameof(buffer)}", "Parameter cannot be null.");
             }
 
             if (offset < 0)
             {
-                throw new ArgumentOutOfRangeException($"{nameof(offset)} cannot be negative.");
+                throw new ArgumentOutOfRangeException($"{nameof(offset)}", "Parameter cannot be negative.");
             }
 
             if (count < 0)
             {
-                throw new ArgumentOutOfRangeException($"{nameof(count)} cannot be negative.");
+                throw new ArgumentOutOfRangeException($"{nameof(count)}", "Parameter cannot be negative.");
             }
 
             if (offset + count > buffer.Length)

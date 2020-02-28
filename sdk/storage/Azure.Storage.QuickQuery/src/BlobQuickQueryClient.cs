@@ -297,7 +297,6 @@ namespace Azure.Storage.QuickQuery
                         InputSerialization = inputTextConfiguration.ToQuickQuerySerialization(),
                         OutputSerialization = outputTextConfiguration.ToQuickQuerySerialization()
                     };
-#pragma warning disable AZC0110 // DO NOT use await keyword in possibly synchronous scope.
                     Response<BlobQuickQueryResult> result = await BlobQuickQueryRestClient.Blob.QuickQueryAsync(
                         clientDiagnostics: ClientDiagnostics,
                         pipeline: Pipeline,
@@ -315,7 +314,6 @@ namespace Azure.Storage.QuickQuery
                         async: async,
                         operationName: $"{nameof(BlobQuickQueryClient)}.{nameof(Query)}",
                         cancellationToken: cancellationToken)
-#pragma warning restore AZC0110 // DO NOT use await keyword in possibly synchronous scope.
                         .ConfigureAwait(false);
 
                     Stream parsedStream = new BlobQuickQueryStream(result.Value.Body, progressReceiver, nonFatalErrorReceiver);

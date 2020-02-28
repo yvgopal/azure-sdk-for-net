@@ -16,17 +16,18 @@ using NUnit.Framework;
 
 namespace Azure.Storage.QuickQuery.Tests
 {
-    public class QuickQueryClientTests : QuickQueryTestBase
+    public class BlobQuickQueryClientTests : QuickQueryTestBase
     {
-        public QuickQueryClientTests(bool async) : this(async, null) { }
+        public BlobQuickQueryClientTests(bool async) : this(async, null) { }
 
-        public QuickQueryClientTests(bool async, RecordedTestMode? mode = null)
+        public BlobQuickQueryClientTests(bool async, RecordedTestMode? mode = null)
             : base(async, mode) { }
 
         public DateTimeOffset OldDate => Recording.Now.AddDays(-1);
         public DateTimeOffset NewDate => Recording.Now.AddDays(1);
 
         [Test]
+        [Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_Min()
         {
             // Arrange
@@ -48,6 +49,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
+        [Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_Error()
         {
             // Arrange
@@ -67,7 +69,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
-        //TODO mark this as ignore
+        [Ignore("Don't want to record 16 MB of data.")]
         public async Task QueryAsync_Large()
         {
             // Arrange
@@ -105,6 +107,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
+        [Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_Progress()
         {
             // Arrange
@@ -130,6 +133,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
+        [Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_QueryTextConfigurations()
         {
             await using DisposingContainer test = await GetTestContainerAsync();
@@ -169,6 +173,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
+        [Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_NonFatalError()
         {
             // Arrange
@@ -205,6 +210,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
+        [Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_FatalError()
         {
             // Arrange
@@ -233,6 +239,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
+        [Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_AccessConditions()
         {
             var garbageLeaseId = GetGarbageLeaseId();
@@ -264,6 +271,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
+        [Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_AccessConditionsFail()
         {
             var garbageLeaseId = GetGarbageLeaseId();
