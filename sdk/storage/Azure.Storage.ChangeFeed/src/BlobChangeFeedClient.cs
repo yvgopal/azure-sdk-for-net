@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using Azure.Storage.Blobs;
 using Azure.Storage.ChangeFeed.Models;
 
@@ -67,10 +68,12 @@ namespace Azure.Storage.ChangeFeed
         /// </summary>
         /// <returns><see cref="BlobChangeFeedAsyncPagable"/>.</returns>
 #pragma warning disable AZC0002 // DO ensure all service methods, both asynchronous and synchronous, take an optional CancellationToken parameter called cancellationToken.
-        public virtual BlobChangeFeedAsyncPagable GetChangesAsync()
+        public virtual async Task<BlobChangeFeedAsyncPagable> GetChangesAsync()
 #pragma warning restore AZC0002 // DO ensure all service methods, both asynchronous and synchronous, take an optional CancellationToken parameter called cancellationToken.
         {
-            return new BlobChangeFeedAsyncPagable(_blobServiceClient);
+            BlobChangeFeedAsyncPagable asyncPagable = new BlobChangeFeedAsyncPagable(_blobServiceClient);
+            await asyncPagable.InitalizeAsyncPagable().ConfigureAwait(false);
+            return asyncPagable;
         }
 
         /// <summary>

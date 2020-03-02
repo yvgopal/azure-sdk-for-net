@@ -296,8 +296,9 @@ namespace Azure.Storage
         internal static class ChangeFeed
         {
             public const string ChangeFeedContainerName = "$blobchangefeed";
-
             public const string SegmentPrefix = "idx/segments/";
+            public const string InitalizationManifestPath = "/0000/";
+            public const string MetaSegmentsPath = "meta/Segments.json";
         }
 
         /// <summary>

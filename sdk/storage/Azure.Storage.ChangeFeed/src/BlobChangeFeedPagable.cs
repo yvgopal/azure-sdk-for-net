@@ -15,12 +15,20 @@ namespace Azure.Storage.ChangeFeed
     /// </summary>
     public class BlobChangeFeedPagable : Pageable<BlobChangeFeedEvent>
     {
-        //private BlobContainerClient _containerClient;
+        private ChangeFeed _changeFeed;
 
-        //internal BlobChangeFeedPagable(BlobServiceClient serviceClient)
-        //{
-        //    _containerClient = serviceClient.GetBlobContainerClient(Constants.ChangeFeed.ChangeFeedContainerName);
-        //}
+        internal BlobChangeFeedPagable(BlobServiceClient serviceClient)
+        {
+            _changeFeed = new ChangeFeed(serviceClient);
+        }
+
+        /// <summary>
+        /// InitalizeAsyncPagable.
+        /// </summary>
+        public void InitalizeAsyncPagable()
+        {
+            _changeFeed.InitalizeChangeFeed(async: false).EnsureCompleted();
+        }
 
         /// <summary>
         /// AsPages.

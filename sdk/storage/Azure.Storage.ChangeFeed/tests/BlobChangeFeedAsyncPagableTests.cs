@@ -24,7 +24,8 @@ namespace Azure.Storage.ChangeFeed.Tests
         {
             BlobServiceClient service = GetServiceClient_SharedKey();
             BlobChangeFeedClient blobChangeFeedClient = service.GetChangeFeedClient();
-            BlobChangeFeedAsyncPagable blobChangeFeedAsyncPagable = blobChangeFeedClient.GetChangesAsync();
+            BlobChangeFeedAsyncPagable blobChangeFeedAsyncPagable
+                = await blobChangeFeedClient.GetChangesAsync().ConfigureAwait(false);
             IList<BlobChangeFeedEvent> list = await blobChangeFeedAsyncPagable.ToListAsync();
             Console.WriteLine("sdfsdf");
         }

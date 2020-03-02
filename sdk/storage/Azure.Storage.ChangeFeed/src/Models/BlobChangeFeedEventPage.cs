@@ -14,6 +14,12 @@ namespace Azure.Storage.ChangeFeed.Models
         public override string ContinuationToken { get; }
         public override Response GetRawResponse() => _raw;
         private Response _raw;
+
+        public BlobChangeFeedEventPage(List<BlobChangeFeedEvent> events)
+        {
+            Values = events;
+        }
+
         public BlobChangeFeedEventPage(Response raw, List<GenericRecord> data)
         {
             _raw = raw;

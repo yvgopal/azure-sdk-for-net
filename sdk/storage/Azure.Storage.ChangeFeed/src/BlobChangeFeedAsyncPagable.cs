@@ -22,14 +22,23 @@ namespace Azure.Storage.ChangeFeed
     /// </summary>
     public class BlobChangeFeedAsyncPagable : AsyncPageable<BlobChangeFeedEvent>
     {
-        private BlobContainerClient _containerClient;
+        private ChangeFeed _changeFeed;
 
         /// <summary>
         /// Internal constructor.
         /// </summary>
-        internal BlobChangeFeedAsyncPagable(BlobServiceClient serviceClient)
+        internal BlobChangeFeedAsyncPagable(BlobServiceClient blobBerviceClient)
         {
-            _containerClient = serviceClient.GetBlobContainerClient(Constants.ChangeFeed.ChangeFeedContainerName);
+            _changeFeed = new ChangeFeed(blobBerviceClient);
+        }
+
+        /// <summary>
+        /// InitalizeAsyncPagable.
+        /// </summary>
+        /// <returns></returns>
+        public async Task InitalizeAsyncPagable()
+        {
+            await _changeFeed.InitalizeChangeFeed(async: true).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -42,44 +51,11 @@ namespace Azure.Storage.ChangeFeed
             string continuationToken = null,
             int? pageSizeHint = null)
         {
-            // Get all the segments
-            await foreach (BlobHierarchyItem segment in _containerClient.GetBlobsByHierarchyAsync(
-                prefix: Constants.ChangeFeed.SegmentPrefix).ConfigureAwait(false))
+            while (_changeFeed.HasNext())
             {
-                if (segment.IsPrefix || segment.Blob.Name.Contains("/0000/"))
-                    continue;
-
-                // Get the segment's JSON
-                using MemoryStream stream = new MemoryStream();
-                await _containerClient.GetBlobClient(segment.Blob.Name).DownloadToAsync(stream).ConfigureAwait(false);
-                stream.Seek(0, SeekOrigin.Begin);
-                using JsonDocument json = JsonDocument.Parse(stream);
-
-                // Get the chunks in the segment
-                foreach (JsonElement chunk in json.RootElement.GetProperty("chunkFilePaths").EnumerateArray())
-                {
-                    // Get all the logs in the chunk
-                    string logPrefix = chunk.GetString().Substring("$blobchangefeed/".Length);
-                    await foreach (BlobHierarchyItem log
-                        in _containerClient.GetBlobsByHierarchyAsync(prefix: logPrefix).ConfigureAwait(false))
-                    {
-                        if (segment.IsPrefix)
-                            continue;
-
-                        // Download and parse the Avro
-                        Page<BlobChangeFeedEvent> page = null;
-                        using (MemoryStream avroStream = new MemoryStream())
-                        {
-                            Response raw = await _containerClient.GetBlobClient(log.Blob.Name)
-                                .DownloadToAsync(avroStream).ConfigureAwait(false);
-                            avroStream.Seek(0, SeekOrigin.Begin);
-                            IFileReader<GenericRecord> avroReader
-                                = DataFileReader<GenericRecord>.OpenReader(avroStream);
-                            page = new BlobChangeFeedEventPage(raw, avroReader.NextEntries.ToList());
-                        }
-                        yield return page;
-                    }
-                }
+                yield return await _changeFeed.GetPage(
+                    async: true,
+                    pageSize: pageSizeHint ?? 512).ConfigureAwait(false);
             }
         }
     }
