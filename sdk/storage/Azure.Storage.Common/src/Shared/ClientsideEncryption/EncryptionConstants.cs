@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-namespace Azure.Storage.Blobs.Specialized
+namespace Azure.Storage.Common.Cryptography
 {
     internal static class EncryptionConstants
     {

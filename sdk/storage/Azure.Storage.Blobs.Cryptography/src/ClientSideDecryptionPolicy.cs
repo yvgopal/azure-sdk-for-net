@@ -6,13 +6,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
-using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.Core.Cryptography;
 using Azure.Core.Pipeline;
 using Azure.Storage.Blobs.Specialized.Models;
 using Azure.Storage.Common;
+using Azure.Storage.Common.Cryptography;
+using Azure.Storage.Common.Cryptography.Models;
 using Metadata = System.Collections.Generic.IDictionary<string, string>;
 
 namespace Azure.Storage.Blobs.Specialized
@@ -126,7 +127,7 @@ namespace Azure.Storage.Blobs.Specialized
         {
             if (LocalKey == default && KeyResolver == default)
             {
-                throw EncryptionErrors.NoKeyAccessor(nameof(LocalKey), nameof(KeyResolver));
+                throw EncryptionErrors.NoKeyAccessor();
             }
         }
 
@@ -174,45 +175,17 @@ namespace Azure.Storage.Blobs.Specialized
             AssertKeyAccessPresent();
             EncryptionData encryptionData = GetAndValidateEncryptionData(metadata);
 
-            Stream plaintext;
-            int read = 0;
-            if (encryptionData != default)
-            {
-                byte[] IV;
-                if (encryptedBlobRange.AdjustedRange.Offset == 0)
-                {
-                    IV = encryptionData.ContentEncryptionIV;
-                }
-                else
-                {
-                    IV = new byte[EncryptionConstants.EncryptionBlockSize];
-                    if (async)
-                    {
-                        await ciphertext.ReadAsync(IV, 0, IV.Length).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        ciphertext.Read(IV, 0, IV.Length);
-                    }
-                    read = IV.Length;
-                }
+            bool ivInStream = encryptedBlobRange.AdjustedRange.Offset != 0; //TODO should this check OriginalRange?
 
-                var getKeyTask = GetContentEncryptionKeyAsync(encryptionData, async);
-                var contentEncyptionKey = (async ? await getKeyTask.ConfigureAwait(false) : getKeyTask.EnsureCompleted()).ToArray();
-                plaintext = WrapStream(
-                    ciphertext,
-                    contentEncyptionKey,
-                    encryptionData,
-                    IV,
-                    noPadding);
-            }
-            else
-            {
-                plaintext = ciphertext;
-            }
+            var decryptTask = Utility.DecryptInternal(ciphertext, encryptionData, ivInStream, KeyResolver, LocalKey, noPadding, async);
+            var plaintext = async
+                ? await decryptTask.ConfigureAwait(false)
+                : decryptTask.EnsureCompleted();
 
-            // still need to readjust ranges even if we didn't decrypt anything, so keep this out of branch
-            int gap = (int)(encryptedBlobRange.OriginalRange.Offset - encryptedBlobRange.AdjustedRange.Offset) - read;
+            // retrim start of stream to original requested location
+            // keeping in mind whether we already pulled the IV out of the stream as well
+            int gap = (int)(encryptedBlobRange.OriginalRange.Offset - encryptedBlobRange.AdjustedRange.Offset)
+                - (ivInStream ? EncryptionConstants.EncryptionBlockSize : 0);
             if (gap > 0)
             {
                 // throw away initial bytes we want to trim off; stream cannot seek into future
@@ -273,74 +246,74 @@ namespace Azure.Storage.Blobs.Specialized
             return encryptionData;
         }
 
-        /// <summary>
-        /// Returns the key encryption key for blob. First tries to get key encryption key from KeyResolver, then
-        /// falls back to IKey stored on this EncryptionPolicy.
-        /// </summary>
-        /// <param name="encryptionData">The encryption data.</param>
-        /// <param name="async">Whether to perform asynchronously.</param>
-        /// <returns>Encryption key as a byte array.</returns>
-        private async Task<Memory<byte>> GetContentEncryptionKeyAsync(EncryptionData encryptionData, bool async)
-        {
-            IKeyEncryptionKey key;
+        ///// <summary>
+        ///// Returns the key encryption key for blob. First tries to get key encryption key from KeyResolver, then
+        ///// falls back to IKey stored on this EncryptionPolicy.
+        ///// </summary>
+        ///// <param name="encryptionData">The encryption data.</param>
+        ///// <param name="async">Whether to perform asynchronously.</param>
+        ///// <returns>Encryption key as a byte array.</returns>
+        //private async Task<Memory<byte>> GetContentEncryptionKeyAsync(EncryptionData encryptionData, bool async)
+        //{
+        //    IKeyEncryptionKey key;
 
-            // If we already have a local key and it is the correct one, use that.
-            if (encryptionData.WrappedContentKey.KeyId == LocalKey?.KeyId)
-            {
-                key = LocalKey;
-            }
-            // Otherwise, use the resolver.
-            else if (KeyResolver != null)
-            {
-                var resolveTask = KeyResolver.ResolveAsync(encryptionData.WrappedContentKey.KeyId);
-                key = async
-                    ? await KeyResolver.ResolveAsync(encryptionData.WrappedContentKey.KeyId).ConfigureAwait(false)
-                    : KeyResolver.Resolve(encryptionData.WrappedContentKey.KeyId);
-            }
-            else
-            {
-                throw EncryptionErrors.KeyNotFound(encryptionData.WrappedContentKey.KeyId);
-            }
+        //    // If we already have a local key and it is the correct one, use that.
+        //    if (encryptionData.WrappedContentKey.KeyId == LocalKey?.KeyId)
+        //    {
+        //        key = LocalKey;
+        //    }
+        //    // Otherwise, use the resolver.
+        //    else if (KeyResolver != null)
+        //    {
+        //        var resolveTask = KeyResolver.ResolveAsync(encryptionData.WrappedContentKey.KeyId);
+        //        key = async
+        //            ? await KeyResolver.ResolveAsync(encryptionData.WrappedContentKey.KeyId).ConfigureAwait(false)
+        //            : KeyResolver.Resolve(encryptionData.WrappedContentKey.KeyId);
+        //    }
+        //    else
+        //    {
+        //        throw EncryptionErrors.KeyNotFound(encryptionData.WrappedContentKey.KeyId);
+        //    }
 
-            if (key == default)
-            {
-                throw EncryptionErrors.NoKeyAccessor(nameof(LocalKey), nameof(KeyResolver));
-            }
+        //    if (key == default)
+        //    {
+        //        throw EncryptionErrors.NoKeyAccessor(nameof(LocalKey), nameof(KeyResolver));
+        //    }
 
-            return async
-                ? await key.UnwrapKeyAsync(
-                    encryptionData.WrappedContentKey.Algorithm,
-                    encryptionData.WrappedContentKey.EncryptedKey).ConfigureAwait(false)
-                : key.UnwrapKey(
-                    encryptionData.WrappedContentKey.Algorithm,
-                    encryptionData.WrappedContentKey.EncryptedKey);
-        }
+        //    return async
+        //        ? await key.UnwrapKeyAsync(
+        //            encryptionData.WrappedContentKey.Algorithm,
+        //            encryptionData.WrappedContentKey.EncryptedKey).ConfigureAwait(false)
+        //        : key.UnwrapKey(
+        //            encryptionData.WrappedContentKey.Algorithm,
+        //            encryptionData.WrappedContentKey.EncryptedKey);
+        //}
 
-        private static Stream WrapStream(Stream contentStream, byte[] contentEncryptionKey,
-            EncryptionData encryptionData, byte[] iv, bool noPadding)
-        {
-            if (encryptionData.EncryptionAgent.EncryptionAlgorithm == ClientSideEncryptionAlgorithm.AesCbc256)
-            {
-                using (AesCryptoServiceProvider aesProvider = new AesCryptoServiceProvider())
-                {
-                    aesProvider.IV = iv ?? encryptionData.ContentEncryptionIV;
-                    aesProvider.Key = contentEncryptionKey;
+        //private static Stream WrapStream(Stream contentStream, byte[] contentEncryptionKey,
+        //    EncryptionData encryptionData, byte[] iv, bool noPadding)
+        //{
+        //    if (encryptionData.EncryptionAgent.EncryptionAlgorithm == ClientSideEncryptionAlgorithm.AesCbc256)
+        //    {
+        //        using (AesCryptoServiceProvider aesProvider = new AesCryptoServiceProvider())
+        //        {
+        //            aesProvider.IV = iv ?? encryptionData.ContentEncryptionIV;
+        //            aesProvider.Key = contentEncryptionKey;
 
-                    if (noPadding)
-                    {
-                        aesProvider.Padding = PaddingMode.None;
-                    }
+        //            if (noPadding)
+        //            {
+        //                aesProvider.Padding = PaddingMode.None;
+        //            }
 
-                    return new RollingBufferStream(
-                        new CryptoStream(contentStream, aesProvider.CreateDecryptor(), CryptoStreamMode.Read),
-                        EncryptionConstants.DefaultRollingBufferSize);
-                }
-            }
-            else
-            {
-                throw EncryptionErrors.BadEncryptionAlgorithm(encryptionData.EncryptionAgent.EncryptionAlgorithm.ToString());
-            }
-        }
+        //            return new RollingBufferStream(
+        //                new CryptoStream(contentStream, aesProvider.CreateDecryptor(), CryptoStreamMode.Read),
+        //                EncryptionConstants.DefaultRollingBufferSize);
+        //        }
+        //    }
+        //    else
+        //    {
+        //        throw EncryptionErrors.BadEncryptionAlgorithm(encryptionData.EncryptionAgent.EncryptionAlgorithm.ToString());
+        //    }
+        //}
 
         private static HttpRange ParseHttpRange(string serializedRange)
         {

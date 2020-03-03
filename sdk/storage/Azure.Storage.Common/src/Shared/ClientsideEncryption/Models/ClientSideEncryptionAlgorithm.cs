@@ -4,12 +4,12 @@
 using System;
 using System.ComponentModel;
 
-namespace Azure.Storage.Blobs.Specialized.Models
+namespace Azure.Storage.Common.Cryptography.Models
 {
     /// <summary>
     /// Specifies the encryption algorithm used to encrypt and decrypt a blob.
     /// </summary>
-    public readonly struct ClientSideEncryptionAlgorithm
+    internal readonly struct ClientSideEncryptionAlgorithm
     {
         internal const string AesCbc256Value = "AES_CBC_256";
 

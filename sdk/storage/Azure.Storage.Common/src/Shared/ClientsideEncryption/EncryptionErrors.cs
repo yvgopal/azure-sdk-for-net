@@ -3,7 +3,7 @@
 
 using System;
 
-namespace Azure.Storage.Blobs.Specialized
+namespace Azure.Storage.Common.Cryptography
 {
     internal static class EncryptionErrors
     {
@@ -18,8 +18,8 @@ namespace Azure.Storage.Blobs.Specialized
             => new ArgumentException($"Invalid Encryption Algorithm \"{algorithm}\" found on the resource. This version of the client" +
                 "library does not support the given encryption algorithm.");
 
-        public static ArgumentException NoKeyAccessor(params string[] names)
-            => new ArgumentException($"One of [{string.Join(", ", names)}] must be non-null.");
+        public static ArgumentException NoKeyAccessor()
+            => new ArgumentException("No key to decrypt data with.");
 
         public static InvalidOperationException MissingEncryptionMetadata(string field)
             => new InvalidOperationException($"Missing field \"{field}\" in encryption metadata");

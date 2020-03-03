@@ -14,7 +14,10 @@ using Azure.Core.Testing;
 using Azure.Security.KeyVault.Keys.Cryptography;
 using Azure.Storage.Blobs.Specialized;
 using Azure.Storage.Blobs.Specialized.Models;
+using Azure.Storage.Common.Cryptography;
+using Azure.Storage.Common.Cryptography.Models;
 using Azure.Storage.Test.Shared;
+using Azure.Storage.Tests.Shared;
 using NUnit.Framework;
 
 namespace Azure.Storage.Blobs.Cryptography.Tests

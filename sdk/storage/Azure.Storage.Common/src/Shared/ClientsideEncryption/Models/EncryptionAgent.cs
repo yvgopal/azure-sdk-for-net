@@ -1,12 +1,12 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-namespace Azure.Storage.Blobs.Specialized.Models
+namespace Azure.Storage.Common.Cryptography.Models
 {
     /// <summary>
     /// Represents the encryption agent stored on the service.
     /// </summary>
-    public class EncryptionAgent
+    internal class EncryptionAgent
     {
         /// <summary>
         /// The protocol version used for encryption.

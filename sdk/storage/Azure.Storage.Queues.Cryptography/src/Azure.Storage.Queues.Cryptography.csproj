@@ -3,19 +3,19 @@
     <TargetFrameworks>$(RequiredTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup>
-    <AssemblyTitle>Microsoft Azure.Storage.Blobs.Cryptography client library</AssemblyTitle>
+    <AssemblyTitle>Microsoft Azure.Storage.Queues.Cryptography client library</AssemblyTitle>
     <Version>12.4.0-preview.1</Version>
-    <DefineConstants>BlobSDK;$(DefineConstants)</DefineConstants>
+    <DefineConstants>QueueSDK;$(DefineConstants)</DefineConstants>
     <PackageTags>Microsoft Azure Storage Blobs Cryptography;Encrypted blob;client-side encryption;client side ecnryption;Microsoft;Azure;Blobs;Blob;Storage;StorageScalable;$(PackageCommonTags)</PackageTags>
     <Description>
-      This client library supports client-side encryption for the Microsoft Azure Storage Blob service.
-      For this release see notes - https://github.com/Azure/azure-sdk-for-net/blob/master/sdk/storage/Azure.Storage.Blobs.Cryptography/README.md and https://github.com/Azure/azure-sdk-for-net/blob/master/sdk/storage/Azure.Storage.Blobs.Cryptography/CHANGELOG.md
-      in addition to the breaking changes https://github.com/Azure/azure-sdk-for-net/blob/master/sdk/storage/Azure.Storage.Blobs.Cryptography/BreakingChanges.txt
+      This client library supports client-side encryption for the Microsoft Azure Storage Queue service.
+      For this release see notes - https://github.com/Azure/azure-sdk-for-net/blob/master/sdk/storage/Azure.Storage.Queues.Cryptography/README.md and https://github.com/Azure/azure-sdk-for-net/blob/master/sdk/storage/Azure.Storage.Queues.Cryptography/CHANGELOG.md
+      in addition to the breaking changes https://github.com/Azure/azure-sdk-for-net/blob/master/sdk/storage/Azure.Storage.Queues.Cryptography/BreakingChanges.txt
       Microsoft Azure Storage quickstarts and tutorials - https://docs.microsoft.com/en-us/azure/storage/
       Microsoft Azure Storage REST API Reference - https://docs.microsoft.com/en-us/rest/api/storageservices/
-      REST API Reference for Blob Service - https://docs.microsoft.com/en-us/rest/api/storageservices/blob-service-rest-api
+      REST API Reference for Queue Service - https://docs.microsoft.com/en-us/rest/api/storageservices/queue-service-rest-api
     </Description>
-    <RootNamespace>Azure.Storage.Blobs.Specialized</RootNamespace>
+    <RootNamespace>Azure.Storage.Queues.Specialized</RootNamespace>
     <EnableApiCompat>false</EnableApiCompat>
   </PropertyGroup>
   <ItemGroup>
@@ -23,15 +23,12 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Azure.Storage.Common\src\Azure.Storage.Common.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Azure.Storage.Blobs\src\Azure.Storage.Blobs.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Azure.Storage.Queues\src\Azure.Storage.Queues.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="$(AzureCoreSharedSources)ArrayBufferWriter.cs" Link="Shared\Core\%(RecursiveDir)\%(Filename)%(Extension)" />
-    <Compile Include="$(AzureCoreSharedSources)ClientDiagnostics.cs" Link="Shared\Core\%(RecursiveDir)\%(Filename)%(Extension)" />
     <Compile Include="$(AzureCoreSharedSources)ContentTypeUtilities.cs" Link="Shared\Core\%(RecursiveDir)\%(Filename)%(Extension)" />
     <Compile Include="$(AzureCoreSharedSources)DiagnosticScope.cs" Link="Shared\Core\%(RecursiveDir)\%(Filename)%(Extension)" />
-    <Compile Include="$(AzureCoreSharedSources)DiagnosticScopeFactory.cs" Link="Shared\Core\%(RecursiveDir)\%(Filename)%(Extension)" />
-    <Compile Include="$(AzureCoreSharedSources)HttpMessageSanitizer.cs" Link="Shared\Core\%(RecursiveDir)\%(Filename)%(Extension)" />
     <Compile Include="$(AzureCoreSharedSources)NoBodyResponse{T}.cs" Link="Shared\Core\%(RecursiveDir)\%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
@@ -39,9 +36,7 @@
     <Compile Include="$(AzureStorageSharedSources)ClientsideEncryption\Models\*.cs" Link="Shared\ClientsideEncryption\Models\%(RecursiveDir)\%(Filename)%(Extension)" />
     <Compile Include="$(AzureStorageSharedSources)Constants.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
     <Compile Include="$(AzureStorageSharedSources)Errors.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
-    <Compile Include="$(AzureStorageSharedSources)Errors.Clients.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
-    <Compile Include="$(AzureStorageSharedSources)TaskExtensions.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
     <Compile Include="$(AzureStorageSharedSources)StorageExceptionExtensions.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
-    <Compile Include="$(AzureStorageSharedSources)UriExtensions.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
+    <Compile Include="$(AzureStorageSharedSources)TaskExtensions.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

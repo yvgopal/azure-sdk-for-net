@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using Azure.Storage.Common.Cryptography;
+
 namespace Azure.Storage.Blobs.Specialized.Models
 {
     /// <summary>

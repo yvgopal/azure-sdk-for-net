@@ -4,7 +4,7 @@
 using System;
 using Azure.Core.Cryptography;
 
-namespace Azure.Storage.Blobs.Specialized
+namespace Azure.Storage.Common.Cryptography
 {
     /// <summary>
     /// Provides the client configuration options for connecting to Azure Blob using clientside encryption.

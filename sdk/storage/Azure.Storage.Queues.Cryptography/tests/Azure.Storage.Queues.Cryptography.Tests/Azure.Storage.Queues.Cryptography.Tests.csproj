@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(RequiredTargetFrameworks)</TargetFrameworks>
+    <AssemblyTitle>Microsoft Azure.Storage.Queues.Cryptography client library tests</AssemblyTitle>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Azure.Security.KeyVault.Keys" />
+    <PackageReference Include="Microsoft.Azure.KeyVault.Core" />
+    <PackageReference Include="Microsoft.Azure.Storage.Queue"/>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\..\Azure.Storage.Common\src\Azure.Storage.Common.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\..\Azure.Storage.Queues\src\Azure.Storage.Queues.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\src\Azure.Storage.Queues.Cryptography.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)..\..\..\Azure.Storage.Common\tests\Shared\**\*.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
+    <None Include="$(MSBuildThisFileDirectory)..\..\..\Azure.Storage.Common\tests\Shared\*.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)..\..\..\Azure.Storage.Blobs.Cryptography\tests\Azure.Storage.Blobs.Cryptography.Tests\MockKeyEncryptionKey.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\..\..\Azure.Storage.Queues\tests\QueueTestBase.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
+    <Compile Include="$(AzureStorageSharedSources)StorageConnectionString.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
+    <Compile Include="$(AzureStorageSharedSources)SharedAccessSignatureCredentials.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
+    <Compile Include="$(AzureStorageSharedSources)StorageExceptionExtensions.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
+    <Compile Include="$(AzureStorageSharedSources)UriExtensions.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
+    <Compile Include="$(AzureStorageSharedSources)UriQueryParamsCollection.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

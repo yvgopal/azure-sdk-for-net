@@ -11,9 +11,12 @@ using Azure.Core;
 using Azure.Core.Cryptography;
 using Azure.Core.Pipeline;
 using Azure.Storage.Blobs.Models;
-using Azure.Storage.Blobs.Specialized.Models;
 using Azure.Storage.Common;
+using Azure.Storage.Common.Cryptography.Models;
+using Azure.Storage.Common.Cryptography;
+
 using Metadata = System.Collections.Generic.IDictionary<string, string>;
+using static Azure.Storage.Common.Cryptography.Utility;
 
 namespace Azure.Storage.Blobs.Specialized
 {
@@ -66,7 +69,6 @@ namespace Azure.Storage.Blobs.Specialized
         /// <param name="encryptionOptions">
         /// Clientside encryption options to provide encryption and/or
         /// decryption implementations to the client.
-        /// every request.
         /// </param>
         /// <param name="options">
         /// Optional client options that define the transport pipeline
@@ -251,20 +253,7 @@ namespace Azure.Storage.Blobs.Specialized
         /// </param>
         /// <returns>Transformed content stream.</returns>
         protected override BlobUploadContent TransformUploadContent(BlobUploadContent content, CancellationToken cancellationToken = default)
-        {
-            (Stream encryptionStream, EncryptionData encryptionData) = EncryptStreamAsync(content.Content, false, cancellationToken).EnsureCompleted();
-
-            var updatedMetadata = new Dictionary<string, string>(content.Metadata ?? new Dictionary<string, string>(), StringComparer.OrdinalIgnoreCase)
-            {
-                { EncryptionConstants.EncryptionDataKey, encryptionData.Serialize() }
-            };
-
-            return new BlobUploadContent
-            {
-                Content = encryptionStream,
-                Metadata = updatedMetadata
-            };
-        }
+            => TransformUploadContentInternal(content, false, cancellationToken).EnsureCompleted();
 
         /// <summary>
         /// Encrypts the upload stream.
@@ -276,8 +265,20 @@ namespace Azure.Storage.Blobs.Specialized
         /// </param>
         /// <returns>Transformed content stream.</returns>
         protected override async Task<BlobUploadContent> TransformUploadContentAsync(BlobUploadContent content, CancellationToken cancellationToken = default)
+            => await TransformUploadContentInternal(content, true, cancellationToken).ConfigureAwait(false);
+
+        private async Task<BlobUploadContent> TransformUploadContentInternal(BlobUploadContent content, bool async, CancellationToken cancellationToken)
         {
-            (Stream encryptionStream, EncryptionData encryptionData) = await EncryptStreamAsync(content.Content, true, cancellationToken).ConfigureAwait(false);
+            var task = EncryptInternal(
+                content.Content,
+                KeyWrapper,
+                KeyWrapAlgorithm,
+                async: async,
+                cancellationToken);
+
+            (Stream nonSeekableCiphertext, EncryptionData encryptionData) = async
+                ? await task.ConfigureAwait(false)
+                : task.EnsureCompleted();
 
             var updatedMetadata = new Dictionary<string, string>(content.Metadata ?? new Dictionary<string, string>(), StringComparer.OrdinalIgnoreCase)
             {
@@ -286,43 +287,28 @@ namespace Azure.Storage.Blobs.Specialized
 
             return new BlobUploadContent
             {
-                Content = encryptionStream,
+                Content = new RollingBufferStream(
+                    nonSeekableCiphertext,
+                    EncryptionConstants.DefaultRollingBufferSize,
+                    content.Content.Length + (EncryptionConstants.EncryptionBlockSize - content.Content.Length % EncryptionConstants.EncryptionBlockSize)),
                 Metadata = updatedMetadata
             };
-        }
 
-        private async Task<(Stream, EncryptionData)> EncryptStreamAsync(Stream plaintext, bool async, CancellationToken cancellationToken)
-        {
-            var generatedKey = CreateKey(EncryptionConstants.EncryptionKeySizeBits);
+            //var generatedKey = CreateKey(EncryptionConstants.EncryptionKeySizeBits);
 
-            using (AesCryptoServiceProvider aesProvider = new AesCryptoServiceProvider() { Key = generatedKey })
-            {
+            //using (AesCryptoServiceProvider aesProvider = new AesCryptoServiceProvider() { Key = generatedKey })
+            //{
 
-                var encryptionData = async
-                    ? await EncryptionData.CreateInternal(aesProvider.IV, KeyWrapAlgorithm, generatedKey, KeyWrapper, true, cancellationToken).ConfigureAwait(false)
-                    : EncryptionData.CreateInternal(aesProvider.IV, KeyWrapAlgorithm, generatedKey, KeyWrapper, false, cancellationToken).EnsureCompleted();
+            //    var encryptionData = async
+            //        ? await EncryptionData.CreateInternal(aesProvider.IV, KeyWrapAlgorithm, generatedKey, KeyWrapper, true, cancellationToken).ConfigureAwait(false)
+            //        : EncryptionData.CreateInternal(aesProvider.IV, KeyWrapAlgorithm, generatedKey, KeyWrapper, false, cancellationToken).EnsureCompleted();
 
-                var encryptedContent = new RollingBufferStream(
-                    new CryptoStream(plaintext, aesProvider.CreateEncryptor(), CryptoStreamMode.Read),
-                    EncryptionConstants.DefaultRollingBufferSize,
-                    plaintext.Length + (EncryptionConstants.EncryptionBlockSize - plaintext.Length % EncryptionConstants.EncryptionBlockSize));
-                return (encryptedContent, encryptionData);
-            }
-        }
-
-        /// <summary>
-        /// Securely generate a key.
-        /// </summary>
-        /// <param name="numBits">Key size.</param>
-        /// <returns>The generated key bytes.</returns>
-        private static byte[] CreateKey(int numBits)
-        {
-            using (var rng = new RNGCryptoServiceProvider())
-            {
-                var buff = new byte[numBits / 8];
-                rng.GetBytes(buff);
-                return buff;
-            }
+            //    var encryptedContent = new RollingBufferStream(
+            //        new CryptoStream(plaintext, aesProvider.CreateEncryptor(), CryptoStreamMode.Read),
+            //        EncryptionConstants.DefaultRollingBufferSize,
+            //        plaintext.Length + (EncryptionConstants.EncryptionBlockSize - plaintext.Length % EncryptionConstants.EncryptionBlockSize));
+            //    return (encryptedContent, encryptionData);
+            //}
         }
     }
 

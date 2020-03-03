@@ -6,10 +6,11 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 
-namespace Azure.Storage.Blobs.Specialized.Models
+namespace Azure.Storage.Common.Cryptography.Models
 {
     internal static class EncryptionDataSerializer
     {
+        #region Serialize
         public static string Serialize(EncryptionData data)
         {
             return Encoding.UTF8.GetString(SerializeEncryptionData(data).ToArray());
@@ -28,7 +29,7 @@ namespace Azure.Storage.Blobs.Specialized.Models
             return writer.WrittenMemory;
         }
 
-        private static void WriteEncryptionData(Utf8JsonWriter json, EncryptionData data)
+        public static void WriteEncryptionData(Utf8JsonWriter json, EncryptionData data)
         {
             json.WriteString(nameof(data.EncryptionMode), data.EncryptionMode);
 
@@ -67,7 +68,9 @@ namespace Azure.Storage.Blobs.Specialized.Models
                 json.WriteString(entry.Key, entry.Value);
             }
         }
+        #endregion
 
+        #region Deserialize
         public static EncryptionData Deserialize(string serializedData)
         {
             var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(serializedData));
@@ -81,7 +84,7 @@ namespace Azure.Storage.Blobs.Specialized.Models
             return ReadEncryptionData(root);
         }
 
-        private static EncryptionData ReadEncryptionData(JsonElement root)
+        public static EncryptionData ReadEncryptionData(JsonElement root)
         {
             var data = new EncryptionData();
             foreach (var property in root.EnumerateObject())
@@ -157,5 +160,6 @@ namespace Azure.Storage.Blobs.Specialized.Models
                 agent.Protocol = property.Value.GetString();
             }
         }
+        #endregion
     }
 }

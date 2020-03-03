@@ -113,6 +113,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Storage.Blobs.Cryptog
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ApiCompat", "..\..\eng\ApiCompat\ApiCompat.csproj", "{16260507-C87E-44D2-883F-8E338B7A519F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.Storage.Queues.Cryptography", "Azure.Storage.Queues.Cryptography\src\Azure.Storage.Queues.Cryptography.csproj", "{27B4D885-AD87-4B94-9603-FFB07239AD19}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.Storage.Queues.Cryptography.Tests", "Azure.Storage.Queues.Cryptography\tests\Azure.Storage.Queues.Cryptography.Tests\Azure.Storage.Queues.Cryptography.Tests.csproj", "{E40DCCA6-0125-4E00-9C62-13B6121CD9FF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -203,6 +207,14 @@ Global
 		{16260507-C87E-44D2-883F-8E338B7A519F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{16260507-C87E-44D2-883F-8E338B7A519F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{16260507-C87E-44D2-883F-8E338B7A519F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{27B4D885-AD87-4B94-9603-FFB07239AD19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{27B4D885-AD87-4B94-9603-FFB07239AD19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{27B4D885-AD87-4B94-9603-FFB07239AD19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{27B4D885-AD87-4B94-9603-FFB07239AD19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E40DCCA6-0125-4E00-9C62-13B6121CD9FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E40DCCA6-0125-4E00-9C62-13B6121CD9FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E40DCCA6-0125-4E00-9C62-13B6121CD9FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E40DCCA6-0125-4E00-9C62-13B6121CD9FF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

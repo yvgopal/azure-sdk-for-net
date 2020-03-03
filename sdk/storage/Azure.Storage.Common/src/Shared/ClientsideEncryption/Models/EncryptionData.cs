@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Azure.Core.Cryptography;
 using Metadata = System.Collections.Generic.IDictionary<string, string>;
 
-namespace Azure.Storage.Blobs.Specialized.Models
+namespace Azure.Storage.Common.Cryptography.Models
 {
     /// <summary>
     /// Represents the encryption data that is stored on the service.
