@@ -25,12 +25,12 @@ namespace Azure.Storage.ChangeFeed.Tests
             BlobServiceClient service = GetServiceClient_SharedKey();
             BlobChangeFeedClient blobChangeFeedClient = service.GetChangeFeedClient();
             BlobChangeFeedAsyncPagable blobChangeFeedAsyncPagable
-                = await blobChangeFeedClient.GetChangesAsync().ConfigureAwait(false);
+                = blobChangeFeedClient.GetChangesAsync();
             IList<BlobChangeFeedEvent> list = await blobChangeFeedAsyncPagable.ToListAsync();
-            //foreach (BlobChangeFeedEvent e in list)
-            //{
-            //    Console.WriteLine(e.Id);
-            //}
+            foreach (BlobChangeFeedEvent e in list)
+            {
+                Console.WriteLine(e.Id);
+            }
         }
     }
 }

@@ -33,15 +33,6 @@ namespace Azure.Storage.ChangeFeed
         }
 
         /// <summary>
-        /// InitalizeAsyncPagable.
-        /// </summary>
-        /// <returns></returns>
-        public async Task InitalizeAsyncPagable()
-        {
-            await _changeFeed.InitalizeChangeFeed(async: true).ConfigureAwait(false);
-        }
-
-        /// <summary>
         /// AsPages.
         /// </summary>
         /// <param name="continuationToken"></param>

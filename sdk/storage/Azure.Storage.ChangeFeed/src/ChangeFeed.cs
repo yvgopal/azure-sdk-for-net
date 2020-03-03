@@ -19,15 +19,17 @@ namespace Azure.Storage.ChangeFeed
         private int _segmentCursor;
         //TODO need to make mutable for live streaming events
         private DateTimeOffset _lastConsumable;
+        private bool _isInitalized;
 
         public ChangeFeed(BlobServiceClient blobServiceClient)
         {
             _containerClient = blobServiceClient.GetBlobContainerClient(Constants.ChangeFeed.ChangeFeedContainerName);
             _segments = new List<Segment>();
             _segmentCursor = 0;
+            _isInitalized = false;
         }
 
-        public  async Task InitalizeChangeFeed(bool async)
+        private async Task Initalize(bool async)
         {
             // Check if Change Feed has been abled for this account.
             bool changeFeedContainerExists;
@@ -98,6 +100,8 @@ namespace Azure.Storage.ChangeFeed
                     _segments.Add(segment);
                 }
             }
+
+            _isInitalized = true;
         }
 
         //TODO current round robin strategy doesn't work for live streaming!
@@ -106,6 +110,18 @@ namespace Azure.Storage.ChangeFeed
             bool async,
             int pageSize = 512)
         {
+            if (!_isInitalized)
+            {
+                if (async)
+                {
+                    await Initalize(async: true).ConfigureAwait(false);
+                }
+                else
+                {
+                    Initalize(async: false).EnsureCompleted();
+                }
+            }
+
             if (!HasNext())
             {
                 return null;
@@ -135,12 +151,16 @@ namespace Azure.Storage.ChangeFeed
 
         public bool HasNext()
         {
+            if (!_isInitalized)
+            {
+                return true;
+            }
             return _segments.Count > 0;
         }
 
-        //public DateTimeOffset LastConsumable()
-        //{
-        //    return _lastConsumable;
-        //}
+        public DateTimeOffset LastConsumable()
+        {
+            return _lastConsumable;
+        }
     }
 }

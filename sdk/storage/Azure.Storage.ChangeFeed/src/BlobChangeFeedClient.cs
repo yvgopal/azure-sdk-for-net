@@ -68,11 +68,10 @@ namespace Azure.Storage.ChangeFeed
         /// </summary>
         /// <returns><see cref="BlobChangeFeedAsyncPagable"/>.</returns>
 #pragma warning disable AZC0002 // DO ensure all service methods, both asynchronous and synchronous, take an optional CancellationToken parameter called cancellationToken.
-        public virtual async Task<BlobChangeFeedAsyncPagable> GetChangesAsync()
+        public virtual BlobChangeFeedAsyncPagable GetChangesAsync()
 #pragma warning restore AZC0002 // DO ensure all service methods, both asynchronous and synchronous, take an optional CancellationToken parameter called cancellationToken.
         {
             BlobChangeFeedAsyncPagable asyncPagable = new BlobChangeFeedAsyncPagable(_blobServiceClient);
-            await asyncPagable.InitalizeAsyncPagable().ConfigureAwait(false);
             return asyncPagable;
         }
 
