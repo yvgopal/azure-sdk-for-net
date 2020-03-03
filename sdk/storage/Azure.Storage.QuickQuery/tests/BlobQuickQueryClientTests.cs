@@ -50,6 +50,30 @@ namespace Azure.Storage.QuickQuery.Tests
 
         [Test]
         [Ignore("Recording framework doesn't play nicely with Avro")]
+        public async Task QueryAsync_Snapshot()
+        {
+            // Arrange
+            await using DisposingContainer test = await GetTestContainerAsync();
+            BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
+            Stream stream = CreateDataStream(Constants.KB);
+            await blockBlobClient.UploadAsync(stream);
+            Response<BlobSnapshotInfo> snapshotResponse = await blockBlobClient.CreateSnapshotAsync();
+            BlockBlobClient snapshotClient = InstrumentClient(blockBlobClient.WithSnapshot(snapshotResponse.Value.Snapshot));
+
+            // Act
+            BlobQuickQueryClient queryClient = snapshotClient.GetQuickQueryClient();
+            string query = @"SELECT _2 from BlobStorage WHERE _1 > 250;";
+            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(query);
+
+            using StreamReader streamReader = new StreamReader(response.Value.Content);
+            string s = await streamReader.ReadToEndAsync();
+
+            // Assert
+            Assert.AreEqual("400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n400\n", s);
+        }
+
+        [Test]
+        [Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_Error()
         {
             // Arrange
