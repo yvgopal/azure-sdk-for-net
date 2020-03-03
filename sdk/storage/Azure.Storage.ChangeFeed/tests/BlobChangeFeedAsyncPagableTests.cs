@@ -27,7 +27,10 @@ namespace Azure.Storage.ChangeFeed.Tests
             BlobChangeFeedAsyncPagable blobChangeFeedAsyncPagable
                 = await blobChangeFeedClient.GetChangesAsync().ConfigureAwait(false);
             IList<BlobChangeFeedEvent> list = await blobChangeFeedAsyncPagable.ToListAsync();
-            Console.WriteLine("sdfsdf");
+            //foreach (BlobChangeFeedEvent e in list)
+            //{
+            //    Console.WriteLine(e.Id);
+            //}
         }
     }
 }

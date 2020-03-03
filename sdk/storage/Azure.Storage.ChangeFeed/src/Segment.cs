@@ -19,6 +19,7 @@ namespace Azure.Storage.ChangeFeed
         private readonly string _manifestPath;
         private readonly List<Shard> _shards;
         private int _shardCursor;
+        private bool _isInitalized;
 
         public Segment(
             BlobContainerClient containerClient,
@@ -30,7 +31,7 @@ namespace Azure.Storage.ChangeFeed
             _shardCursor = 0;
         }
 
-        public async Task InitalizeSegment(bool async)
+        private async Task Initalize(bool async)
         {
             // Download segment manifest
             BlobClient blobClient = _containerClient.GetBlobClient(_manifestPath);
@@ -66,18 +67,9 @@ namespace Azure.Storage.ChangeFeed
                 //TODO cleanup this line
                 string shardPath = shardJsonElement.ToString().Substring("$blobchangefeed/".Length);
                 Shard shard = new Shard(_containerClient, shardPath);
-
-                if (async)
-                {
-                    await shard.InitalizeShard(async: true).ConfigureAwait(false);
-                }
-                else
-                {
-                    shard.InitalizeShard(async: false).EnsureCompleted();
-                }
-
                 _shards.Add(shard);
             }
+            _isInitalized = true;
         }
 
         public async Task<Page<BlobChangeFeedEvent>> GetPage(
@@ -85,6 +77,18 @@ namespace Azure.Storage.ChangeFeed
             int? pageSize)
         {
             List<BlobChangeFeedEvent> changeFeedEventList = new List<BlobChangeFeedEvent>();
+
+            if (!_isInitalized)
+            {
+                if (async)
+                {
+                    await Initalize(async: true).ConfigureAwait(false);
+                }
+                else
+                {
+                    Initalize(async: false).EnsureCompleted();
+                }
+            }
 
             if (!HasNext())
             {
@@ -129,6 +133,11 @@ namespace Azure.Storage.ChangeFeed
         //TODO figure out if this is right.
         public bool HasNext()
         {
+            if (!_isInitalized)
+            {
+                return true;
+            }
+
             return _shards.Count > 0;
         }
     }

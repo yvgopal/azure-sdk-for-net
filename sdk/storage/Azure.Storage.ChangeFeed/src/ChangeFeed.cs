@@ -18,7 +18,7 @@ namespace Azure.Storage.ChangeFeed
         private readonly List<Segment> _segments;
         private int _segmentCursor;
         //TODO need to make mutable for live streaming events
-        //private DateTimeOffset _lastConsumable;
+        private DateTimeOffset _lastConsumable;
 
         public ChangeFeed(BlobServiceClient blobServiceClient)
         {
@@ -47,29 +47,29 @@ namespace Azure.Storage.ChangeFeed
                 throw new ArgumentException("Change Feed hasn't been enabled on this account, or is current being enabled.");
             }
 
-            //// Get last consumable
-            //BlobClient blobClient = _containerClient.GetBlobClient(Constants.ChangeFeed.MetaSegmentsPath);
-            //BlobDownloadInfo blobDownloadInfo;
-            //if (async)
-            //{
-            //    blobDownloadInfo = await blobClient.DownloadAsync().ConfigureAwait(false);
-            //}
-            //else
-            //{
-            //    blobDownloadInfo = blobClient.Download();
-            //}
+            // Get last consumable
+            BlobClient blobClient = _containerClient.GetBlobClient(Constants.ChangeFeed.MetaSegmentsPath);
+            BlobDownloadInfo blobDownloadInfo;
+            if (async)
+            {
+                blobDownloadInfo = await blobClient.DownloadAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                blobDownloadInfo = blobClient.Download();
+            }
 
-            //JsonDocument jsonMetaSegment;
-            //if (async)
-            //{
-            //    jsonMetaSegment = await JsonDocument.ParseAsync(blobDownloadInfo.Content).ConfigureAwait(false);
-            //}
-            //else
-            //{
-            //    jsonMetaSegment = JsonDocument.Parse(blobDownloadInfo.Content);
-            //}
+            JsonDocument jsonMetaSegment;
+            if (async)
+            {
+                jsonMetaSegment = await JsonDocument.ParseAsync(blobDownloadInfo.Content).ConfigureAwait(false);
+            }
+            else
+            {
+                jsonMetaSegment = JsonDocument.Parse(blobDownloadInfo.Content);
+            }
 
-            //_lastConsumable = jsonMetaSegment.RootElement.GetProperty("lastConsumable").GetDateTimeOffset();
+            _lastConsumable = jsonMetaSegment.RootElement.GetProperty("lastConsumable").GetDateTimeOffset();
 
             // Get Segments
             if (async)
@@ -82,8 +82,6 @@ namespace Azure.Storage.ChangeFeed
                         continue;
 
                     Segment segment = new Segment(_containerClient, blobHierarchyItem.Blob.Name);
-                    // TODO maybe we shoud lazially initalize the segments as they are needed?
-                    await segment.InitalizeSegment(async: true).ConfigureAwait(false);
                     _segments.Add(segment);
                 }
             }
@@ -97,13 +95,13 @@ namespace Azure.Storage.ChangeFeed
                         continue;
 
                     Segment segment = new Segment(_containerClient, blobHierarchyItem.Blob.Name);
-                    // TODO maybe we shoud lazially initalize the segments as they are needed?
-                    segment.InitalizeSegment(async: false).EnsureCompleted();
                     _segments.Add(segment);
                 }
             }
         }
 
+        //TODO current round robin strategy doesn't work for live streaming!
+        // The last segment may still be adding chunks.
         public async Task<Page<BlobChangeFeedEvent>> GetPage(
             bool async,
             int pageSize = 512)

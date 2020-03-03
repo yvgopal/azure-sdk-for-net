@@ -298,7 +298,7 @@ namespace Azure.Storage
             public const string ChangeFeedContainerName = "$blobchangefeed";
             public const string SegmentPrefix = "idx/segments/";
             public const string InitalizationManifestPath = "/0000/";
-            public const string MetaSegmentsPath = "meta/Segments.json";
+            public const string MetaSegmentsPath = "meta/segments.json";
         }
 
         /// <summary>

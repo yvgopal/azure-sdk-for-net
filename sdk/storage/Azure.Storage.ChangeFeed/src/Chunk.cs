@@ -23,17 +23,20 @@ namespace Azure.Storage.ChangeFeed
         //private int _eventCursor;
         private IFileReader<GenericRecord> _avroReader;
 
+        private bool _isInitialized;
+
         public Chunk(
             BlobContainerClient containerClient,
             string chunkPath)
         {
             _blobClient = containerClient.GetBlobClient(chunkPath);
+            _isInitialized = false;
             //_eventCursor = 0;
         }
 
         //TODO need to figure out how to not download the entire chunk
         //TODO figure out live streaming
-        public async Task InitalizeChunk(
+        private async Task Initalize(
             bool async)
         {
             BlobDownloadInfo blobDownloadInfo;
@@ -45,12 +48,18 @@ namespace Azure.Storage.ChangeFeed
             {
                 blobDownloadInfo = _blobClient.Download();
             }
+            _isInitialized = true;
             _avroReader = DataFileReader<GenericRecord>.OpenReader(blobDownloadInfo.Content);
         }
 
         //TODO what if the Segment isn't Finalized??
         public async Task<bool> HasNext(bool async)
         {
+            if (!_isInitialized)
+            {
+                return true;
+            }
+
             if (async)
             {
                 //TODO someday this will be real async
@@ -64,6 +73,18 @@ namespace Azure.Storage.ChangeFeed
 
         public async Task<BlobChangeFeedEvent> Next(bool async)
         {
+            if (!_isInitialized)
+            {
+                if (async)
+                {
+                    await Initalize(async: true).ConfigureAwait(false);
+                }
+                else
+                {
+                    Initalize(async: false).EnsureCompleted();
+                }
+            }
+
             GenericRecord genericRecord;
 
             bool hasNext;

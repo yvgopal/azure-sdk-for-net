@@ -16,6 +16,7 @@ namespace Azure.Storage.ChangeFeed
         private readonly BlobContainerClient _containerClient;
         private readonly string _shardPath;
         private readonly List<Chunk> _chunks;
+        private bool _isInitialized;
 
         public Shard(
             BlobContainerClient containerClient,
@@ -24,9 +25,10 @@ namespace Azure.Storage.ChangeFeed
             _containerClient = containerClient;
             _shardPath = shardPath;
             _chunks = new List<Chunk>();
+            _isInitialized = false;
         }
 
-        public async Task InitalizeShard(bool async)
+        private async Task Initalize(bool async)
         {
             // Get Chunks
             if (async)
@@ -39,8 +41,6 @@ namespace Azure.Storage.ChangeFeed
                         continue;
 
                     Chunk chunk = new Chunk(_containerClient, blobHierarchyItem.Blob.Name);
-                    // TODO maybe we shoud lazially initalize the segments as they are needed?
-                    await chunk.InitalizeChunk(async: true).ConfigureAwait(false);
                     _chunks.Add(chunk);
                 }
             }
@@ -54,27 +54,43 @@ namespace Azure.Storage.ChangeFeed
                         continue;
 
                     Chunk chunk = new Chunk(_containerClient, blobHierarchyItem.Blob.Name);
-                    // TODO maybe we shoud lazially initalize the segments as they are needed?
-                    chunk.InitalizeChunk(async: false).EnsureCompleted();
                     _chunks.Add(chunk);
                 }
             }
+            _isInitialized = true;
         }
 
         public bool HasNext()
         {
+            if (!_isInitialized)
+            {
+                return true;
+            }
+
             return _chunks.Count > 0;
         }
 
         public async Task<BlobChangeFeedEvent> Next(bool async)
         {
+            if (!_isInitialized)
+            {
+                if (async)
+                {
+                    await Initalize(async: true).ConfigureAwait(false);
+                }
+                else
+                {
+                    Initalize(async: false).EnsureCompleted();
+                }
+            }
+
             if (!HasNext())
             {
                 return null;
             }
 
-            BlobChangeFeedEvent changeFeedEvent = null;
             Chunk currentChunk = _chunks[0];
+            BlobChangeFeedEvent changeFeedEvent;
 
             if (async)
             {
@@ -85,17 +101,18 @@ namespace Azure.Storage.ChangeFeed
                 changeFeedEvent = currentChunk.Next(async: false).EnsureCompleted();
             }
 
-            bool hasNext;
+            // Remove currentChunk if it doesn't have another event.
+            bool currentChunkHasNext;
             if (async)
             {
-                hasNext = await currentChunk.HasNext(async: true).ConfigureAwait(false);
+                currentChunkHasNext = await currentChunk.HasNext(async: true).ConfigureAwait(false);
             }
             else
             {
-                hasNext = currentChunk.HasNext(async: false).EnsureCompleted();
+                currentChunkHasNext = currentChunk.HasNext(async: false).EnsureCompleted();
             }
 
-            if (!hasNext)
+            if (!currentChunkHasNext)
             {
                 _chunks.RemoveAt(0);
             }
