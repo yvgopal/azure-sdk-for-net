@@ -15,6 +15,8 @@ namespace Azure.Storage.ChangeFeed.Models
         public override Response GetRawResponse() => _raw;
         private Response _raw;
 
+        public BlobChangeFeedEventPage() { }
+
         public BlobChangeFeedEventPage(List<BlobChangeFeedEvent> events)
         {
             Values = events;

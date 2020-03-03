@@ -12,9 +12,11 @@ using Azure.Storage.ChangeFeed.Models;
 
 namespace Azure.Storage.ChangeFeed
 {
-    internal class Segment
+    internal class Segment : ChangeFeedBase
     {
         public bool Finalized { get; private set; }
+        public DateTimeOffset DateTime { get; private set; }
+
         private readonly BlobContainerClient _containerClient;
         private readonly string _manifestPath;
         private readonly List<Shard> _shards;
@@ -27,6 +29,7 @@ namespace Azure.Storage.ChangeFeed
         {
             _containerClient = containerClient;
             _manifestPath = manifestPath;
+            DateTime = SegmentPathToDateTimeOffset(manifestPath);
             _shards = new List<Shard>();
             _shardCursor = 0;
         }
