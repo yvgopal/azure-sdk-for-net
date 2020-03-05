@@ -1690,6 +1690,15 @@ namespace Azure.Storage.Queues
         }
         #endregion UpdateMessage
 
+        // TODO for when we add extensions to get encrypted queue client from service client
+        ///// <summary>
+        ///// Accessor for separately packaged queue clients to access details about a service client's pipeline.
+        ///// </summary>
+        ///// <param name="serviceClient">Client to get details of.</param>
+        ///// <returns>The details.</returns>
+        //protected static (QueueClientOptions options, HttpPipelinePolicy authPolicy) GetContainerPipelineInfo(QueueServiceClient serviceClient)
+        //    => (serviceClient.SourceOptions, serviceClient.AuthenticationPolicy);
+
         /// <summary>
         /// Performs a transform on the message before upload. It is a no-op by default.
         /// </summary>

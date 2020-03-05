@@ -804,21 +804,25 @@ namespace Azure.Storage.Blobs.Specialized
             bool async = true,
             CancellationToken cancellationToken = default)
         {
-            var pageRange = new HttpRange(
+            var requestedRangeWithRetryLogic = new HttpRange(
                 range.Offset + startOffset,
                 range.Length.HasValue ?
                     range.Length.Value - startOffset :
                     (long?)null);
 
-            Pipeline.LogTrace($"Download {Uri} with range: {pageRange}");
+            Pipeline.LogTrace($"Download {Uri} with range: {requestedRangeWithRetryLogic}");
 
+            /* Last second adjustment for clientside encryption behavior injection
+             * Must save old range to re-adjust stream for user
+             * Default implementation is a no-op */
+            var transformedRange = TransformDownloadSliceRange(range);
             (Response<FlattenedDownloadProperties> response, Stream stream) =
                 await BlobRestClient.Blob.DownloadAsync(
                     ClientDiagnostics,
                     Pipeline,
                     Uri,
                     version: Version.ToVersionString(),
-                    range: pageRange.ToString(),
+                    range: transformedRange.ToString(),
                     leaseId: conditions?.LeaseId,
                     rangeGetContentHash: rangeGetContentHash ? (bool?)true : null,
                     encryptionKey: CustomerProvidedKey?.EncryptionKey,
@@ -836,6 +840,18 @@ namespace Azure.Storage.Blobs.Specialized
             // Watch out for exploding Responses
             long length = response.IsUnavailable() ? 0 : response.Value.ContentLength;
             Pipeline.LogTrace($"Response: {response.GetRawResponse().Status}, ContentLength: {length}");
+
+            // apply transformations to the content
+            var blobContent = new BlobContent()
+            {
+                Content = stream,
+                Metadata = response.Value.Metadata
+            };
+            blobContent = async
+                ? await TransformDownloadSliceContentAsync(blobContent, requestedRangeWithRetryLogic, transformedRange, cancellationToken).ConfigureAwait(false)
+                : TransformDownloadSliceContent(blobContent, requestedRangeWithRetryLogic, transformedRange, cancellationToken);
+            stream = blobContent.Content;
+            response.Value.Metadata = blobContent.Metadata;
 
             return (response, stream);
         }
@@ -3005,6 +3021,50 @@ namespace Azure.Storage.Blobs.Specialized
             }
         }
         #endregion SetAccessTier
+
+        /// <summary>
+        /// Transforms the content of an individual REST download, not an overall multipart download.
+        /// </summary>
+        /// <param name="content">Content of this download slice.</param>
+        /// <param name="originalRange">Orignially requested range of the slice.</param>
+        /// <param name="adjustedRange">Adjusted range of the slice, as determined by <see cref="TransformDownloadSliceRange"/>.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>Transformed content.</returns>
+        protected virtual BlobContent TransformDownloadSliceContent(
+            BlobContent content,
+            HttpRange originalRange,
+            HttpRange adjustedRange,
+            CancellationToken cancellationToken = default)
+        {
+            return content; // no-op
+        }
+
+        /// <summary>
+        /// Transforms the content of an individual REST download asyncronously, not an overall multipart download.
+        /// </summary>
+        /// <param name="content">Content of this download slice.</param>
+        /// <param name="originalRange">Orignially requested range of the slice.</param>
+        /// <param name="adjustedRange">Adjusted range of the slice, as determined by <see cref="TransformDownloadSliceRange"/>.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>Transformed content.</returns>
+        protected virtual Task<BlobContent> TransformDownloadSliceContentAsync(
+            BlobContent content,
+            HttpRange originalRange,
+            HttpRange adjustedRange,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(content); // no-op
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="range"></param>
+        /// <returns></returns>
+        protected virtual HttpRange TransformDownloadSliceRange(HttpRange range)
+        {
+            return range; // no-op
+        }
 
         /// <summary>
         /// Accessor for separately packaged blob clients to access details about a container client's pipeline.

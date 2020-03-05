@@ -17,6 +17,7 @@ using Azure.Storage.Common.Cryptography;
 
 using Metadata = System.Collections.Generic.IDictionary<string, string>;
 using static Azure.Storage.Common.Cryptography.Utility;
+using Azure.Storage.Blobs.Specialized.Models;
 
 namespace Azure.Storage.Blobs.Specialized
 {
@@ -32,6 +33,11 @@ namespace Azure.Storage.Blobs.Specialized
         /// The wrapper used to wrap the content encryption key.
         /// </summary>
         private IKeyEncryptionKey KeyWrapper { get; }
+
+        /// <summary>
+        /// The key resolver used to select the correct key for decrypting existing blobs.
+        /// </summary>
+        private IKeyEncryptionKeyResolver KeyResolver { get; }
 
         /// <summary>
         /// The algorithm identifier to use with the <see cref="KeyWrapper"/>. Value to pass into
@@ -243,6 +249,7 @@ namespace Azure.Storage.Blobs.Specialized
         //}
         #endregion ctors
 
+        #region Transform Upload
         /// <summary>
         /// Encrypts the upload stream.
         /// </summary>
@@ -252,7 +259,7 @@ namespace Azure.Storage.Blobs.Specialized
         /// notifications that the operation should be cancelled.
         /// </param>
         /// <returns>Transformed content stream.</returns>
-        protected override BlobUploadContent TransformUploadContent(BlobUploadContent content, CancellationToken cancellationToken = default)
+        protected override BlobContent TransformUploadContent(BlobContent content, CancellationToken cancellationToken = default)
             => TransformUploadContentInternal(content, false, cancellationToken).EnsureCompleted();
 
         /// <summary>
@@ -264,10 +271,10 @@ namespace Azure.Storage.Blobs.Specialized
         /// notifications that the operation should be cancelled.
         /// </param>
         /// <returns>Transformed content stream.</returns>
-        protected override async Task<BlobUploadContent> TransformUploadContentAsync(BlobUploadContent content, CancellationToken cancellationToken = default)
+        protected override async Task<BlobContent> TransformUploadContentAsync(BlobContent content, CancellationToken cancellationToken = default)
             => await TransformUploadContentInternal(content, true, cancellationToken).ConfigureAwait(false);
 
-        private async Task<BlobUploadContent> TransformUploadContentInternal(BlobUploadContent content, bool async, CancellationToken cancellationToken)
+        private async Task<BlobContent> TransformUploadContentInternal(BlobContent content, bool async, CancellationToken cancellationToken)
         {
             var task = EncryptInternal(
                 content.Content,
@@ -285,7 +292,7 @@ namespace Azure.Storage.Blobs.Specialized
                 { EncryptionConstants.EncryptionDataKey, encryptionData.Serialize() }
             };
 
-            return new BlobUploadContent
+            return new BlobContent
             {
                 Content = new RollingBufferStream(
                     nonSeekableCiphertext,
@@ -310,43 +317,206 @@ namespace Azure.Storage.Blobs.Specialized
             //    return (encryptedContent, encryptionData);
             //}
         }
+        #endregion
+
+        #region TransformDownload
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="range"></param>
+        /// <returns></returns>
+        protected override HttpRange TransformDownloadSliceRange(HttpRange range)
+        {
+            return new EncryptedBlobRange(range).AdjustedRange;
+        }
+
+        /// <summary>
+        /// Transforms the content of an individual REST download, not an overall multipart download.
+        /// </summary>
+        /// <param name="content">Content of this download slice.</param>
+        /// <param name="originalRange">Orignially requested range of the slice.</param>
+        /// <param name="adjustedRange">Adjusted range of the slice, as determined by <see cref="TransformDownloadSliceRange"/>.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>Transformed content.</returns>
+        protected override BlobContent TransformDownloadSliceContent(
+            BlobContent content,
+            HttpRange originalRange,
+            HttpRange adjustedRange,
+            CancellationToken cancellationToken = default)
+        {
+            return content; // no-op
+        }
+
+        /// <summary>
+        /// Transforms the content of an individual REST download asyncronously, not an overall multipart download.
+        /// </summary>
+        /// <param name="content">Content of this download slice.</param>
+        /// <param name="originalRange">Orignially requested range of the slice.</param>
+        /// <param name="adjustedRange">Adjusted range of the slice, as determined by <see cref="TransformDownloadSliceRange"/>.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>Transformed content.</returns>
+        protected override Task<BlobContent> TransformDownloadSliceContentAsync(
+            BlobContent content,
+            HttpRange originalRange,
+            HttpRange adjustedRange,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(content); // no-op
+        }
+
+        private async Task<BlobContent> TransformDownloadSliceContentInternal(
+            BlobContent content,
+            HttpRange originalRange,
+            HttpRange adjustedRange,
+            bool async,
+            CancellationToken cancellationToken)
+        {
+            AssertKeyAccessPresent();
+
+            EncryptionData encryptionData = GetAndValidateEncryptionData(content.Metadata);
+            if (encryptionData == default)
+            {
+                return content; // TODO readjust range
+            }
+
+            bool ivInStream = adjustedRange.Offset != 0; //TODO should this check originalRange? tests seem to pass
+
+            var decryptTask = Utility.DecryptInternal(content.Content, encryptionData, ivInStream, KeyResolver, KeyWrapper, CanIgnorePadding(), async);
+            var plaintext = async
+                ? await decryptTask.ConfigureAwait(false)
+                : decryptTask.EnsureCompleted();
+
+            // retrim start of stream to original requested location
+            // keeping in mind whether we already pulled the IV out of the stream as well
+            int gap = (int)(originalRange.Offset - adjustedRange.Offset)
+                - (ivInStream ? EncryptionConstants.EncryptionBlockSize : 0);
+            if (gap > 0)
+            {
+                // throw away initial bytes we want to trim off; stream cannot seek into future
+                if (async)
+                {
+                    await plaintext.ReadAsync(new byte[gap], 0, gap).ConfigureAwait(false);
+                }
+                else
+                {
+                    plaintext.Read(new byte[gap], 0, gap);
+                }
+            }
+
+            return new BlobContent
+            {
+                Content = new LengthLimitingStream(plaintext, originalRange.Length),
+                Metadata = content.Metadata
+            };
+        }
+
+        private void AssertKeyAccessPresent()
+        {
+            if (KeyWrapper == default && KeyResolver == default)
+            {
+                throw EncryptionErrors.NoKeyAccessor();
+            }
+        }
+
+        internal static EncryptionData GetAndValidateEncryptionData(Metadata metadata)
+        {
+            if (metadata == default)
+            {
+                return default;
+            }
+            if (!metadata.TryGetValue(EncryptionConstants.EncryptionDataKey, out string encryptedDataString))
+            {
+                return default;
+            }
+
+            EncryptionData encryptionData = EncryptionData.Deserialize(encryptedDataString);
+
+            _ = encryptionData.ContentEncryptionIV ?? throw EncryptionErrors.MissingEncryptionMetadata(
+                nameof(EncryptionData.ContentEncryptionIV));
+            _ = encryptionData.WrappedContentKey.EncryptedKey ?? throw EncryptionErrors.MissingEncryptionMetadata(
+                nameof(EncryptionData.WrappedContentKey.EncryptedKey));
+
+            // Throw if the encryption protocol on the message doesn't match the version that this client library
+            // understands and is able to decrypt.
+            if (EncryptionConstants.EncryptionProtocolV1 != encryptionData.EncryptionAgent.Protocol)
+            {
+                throw EncryptionErrors.BadEncryptionAgent(encryptionData.EncryptionAgent.Protocol);
+            }
+
+            return encryptionData;
+        }
+
+        /// <summary>
+        /// Gets whether to ignore padding options for decryption.
+        /// </summary>
+        /// <param name="headers">Response headers for the download.</param>
+        /// <returns>True if we should ignore padding.</returns>
+        /// <remarks>
+        /// If the last cipher block of the blob was returned, we need the padding. Otherwise, we can ignore it.
+        /// </remarks>
+        private static bool CanIgnorePadding(ResponseHeaders headers)
+        {
+            // if Content-Range not present, we requested the whole blob
+            if (!headers.TryGetValue(Constants.HeaderNames.ContentRange, out string contentRange))
+            {
+                return false;
+            }
+
+            // parse header value (e.g. "bytes <start>-<end>/<blobSize>")
+            // end is the inclusive last byte; e.g. header "bytes 0-7/8" is the entire 8-byte blob
+            var tokens = contentRange.Split(new char[] { ' ', '-', '/' }); // ["bytes", "<start>", "<end>", "<blobSize>"]
+            if (tokens.Length < 4)
+            {
+                throw Errors.ParsingHttpRangeFailed();
+            }
+
+            // did we request the last block?
+            if (long.Parse(tokens[3], System.Globalization.CultureInfo.InvariantCulture) -
+                long.Parse(tokens[2], System.Globalization.CultureInfo.InvariantCulture) < EncryptionConstants.EncryptionBlockSize)
+            {
+                return false;
+            }
+
+            return true;
+        }
+        #endregion
     }
 
-//TODO uncomment upon Azure.Core.ClientOptions "clone with modifications" support
-//    /// <summary>
-//    /// Add easy to discover methods to <see cref="BlobContainerClient"/> for
-//    /// creating <see cref="EncryptedBlobClient"/> instances.
-//    /// </summary>
-//#pragma warning disable SA1402 // File may only contain a single type
-//    public static partial class SpecializedBlobExtensions
-//#pragma warning restore SA1402 // File may only contain a single type
-//    {
-//        /// <summary>
-//        /// Create a new <see cref="EncryptedBlobClient"/> object by
-//        /// concatenating <paramref name="blobName"/> to
-//        /// the end of the <paramref name="containerClient"/>'s
-//        /// <see cref="BlobContainerClient.Uri"/>.
-//        /// </summary>
-//        /// <param name="containerClient">The <see cref="BlobContainerClient"/>.</param>
-//        /// <param name="blobName">The name of the encrypted block blob.</param>
-//        /// <param name="encryptionOptions">
-//        /// Clientside encryption options to provide encryption and/or
-//        /// decryption implementations to the client.
-//        /// every request.
-//        /// </param>
-//        /// <returns>A new <see cref="EncryptedBlobClient"/> instance.</returns>
-//        public static EncryptedBlobClient GetEncryptedBlobClient(
-//            this BlobContainerClient containerClient,
-//            string blobName,
-//            ClientsideEncryptionOptions encryptionOptions)
-//            /*
-//             * Extension methods have to be in their own static class, but the logic for this method needs a protected
-//             * static method in BlobBaseClient. So this extension method just passes the arguments on to a place with
-//             * access to that method.
-//             */
-//            => EncryptedBlobClient.EncryptedBlobClientFromContainerClient(
-//                containerClient,
-//                blobName,
-//                encryptionOptions);
-//    }
+    //TODO uncomment upon Azure.Core.ClientOptions "clone with modifications" support
+    //    /// <summary>
+    //    /// Add easy to discover methods to <see cref="BlobContainerClient"/> for
+    //    /// creating <see cref="EncryptedBlobClient"/> instances.
+    //    /// </summary>
+    //#pragma warning disable SA1402 // File may only contain a single type
+    //    public static partial class SpecializedBlobExtensions
+    //#pragma warning restore SA1402 // File may only contain a single type
+    //    {
+    //        /// <summary>
+    //        /// Create a new <see cref="EncryptedBlobClient"/> object by
+    //        /// concatenating <paramref name="blobName"/> to
+    //        /// the end of the <paramref name="containerClient"/>'s
+    //        /// <see cref="BlobContainerClient.Uri"/>.
+    //        /// </summary>
+    //        /// <param name="containerClient">The <see cref="BlobContainerClient"/>.</param>
+    //        /// <param name="blobName">The name of the encrypted block blob.</param>
+    //        /// <param name="encryptionOptions">
+    //        /// Clientside encryption options to provide encryption and/or
+    //        /// decryption implementations to the client.
+    //        /// every request.
+    //        /// </param>
+    //        /// <returns>A new <see cref="EncryptedBlobClient"/> instance.</returns>
+    //        public static EncryptedBlobClient GetEncryptedBlobClient(
+    //            this BlobContainerClient containerClient,
+    //            string blobName,
+    //            ClientsideEncryptionOptions encryptionOptions)
+    //            /*
+    //             * Extension methods have to be in their own static class, but the logic for this method needs a protected
+    //             * static method in BlobBaseClient. So this extension method just passes the arguments on to a place with
+    //             * access to that method.
+    //             */
+    //            => EncryptedBlobClient.EncryptedBlobClientFromContainerClient(
+    //                containerClient,
+    //                blobName,
+    //                encryptionOptions);
+    //    }
 }

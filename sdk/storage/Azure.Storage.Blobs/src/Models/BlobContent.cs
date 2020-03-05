@@ -7,9 +7,9 @@ using Metadata = System.Collections.Generic.IDictionary<string, string>;
 namespace Azure.Storage.Blobs.Models
 {
     /// <summary>
-    /// Blob content to be uploaded by a <see cref="Specialized.BlobBaseClient"/>.
+    /// Blob content to be moved by a <see cref="Specialized.BlobBaseClient"/>.
     /// </summary>
-    public class BlobUploadContent
+    public class BlobContent
     {
         /// <summary>
         /// Content stream to upload.

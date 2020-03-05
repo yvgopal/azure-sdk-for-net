@@ -182,6 +182,30 @@ namespace Azure.Storage.Queues.Specialized
             KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
             KeyResolver = encryptionOptions.KeyResolver;
         }
+
+        // TODO for when we add extensions to get encrypted queue client from service client
+        ///// <summary>
+        ///// This behaves like a constructor. It has a conflicting signature with another public construtor, but
+        ///// has different behavior. The necessary extra behavior happens in this method and then invokes a private
+        ///// constructor with a now-unique signature.
+        ///// </summary>
+        ///// <param name="serviceClient"></param>
+        ///// <param name="queueName"></param>
+        ///// <param name="encryptionOptions"></param>
+        ///// <returns></returns>
+        //internal static EncryptedQueueClient EncryptedQueueClientFromServiceClient(
+        //    QueueServiceClient serviceClient,
+        //    string queueName,
+        //    ClientsideEncryptionOptions encryptionOptions)
+        //{
+        //    (var options, var authPolicy) = GetContainerPipelineInfo(serviceClient);
+
+        //    return new EncryptedBlobClient(
+        //        serviceClient.Uri.AppendToPath(queueName),
+        //        encryptionOptions,
+        //        authPolicy,
+        //        editedOptions);
+        //}
         #endregion
 
         /// <inheritdoc/>
@@ -218,4 +242,29 @@ namespace Azure.Storage.Queues.Specialized
             return new StreamReader(decryptedMessageStream, Encoding.UTF8).ReadToEnd();
         }
     }
+
+// TODO for when we add extensions to get encrypted queue client from service client
+//    /// <summary>
+//    /// Add easy to discover methods to <see cref="QueueServiceClient"/> for
+//    /// creating <see cref="EncryptedQueueClient"/> instances.
+//    /// </summary>
+//#pragma warning disable SA1402 // File may only contain a single type
+//    public static partial class SpecializedQueueExtensions
+//#pragma warning restore SA1402 // File may only contain a single type
+//    {
+//        /// <summary>
+//        ///
+//        /// </summary>
+//        /// <param name="serviceClient"></param>
+//        /// <param name="queueName"></param>
+//        /// <param name="encryptionOptions"></param>
+//        /// <returns></returns>
+//        public static EncryptedQueueClient GetEncryptedQueueClient(
+//            this QueueServiceClient serviceClient,
+//            string queueName,
+//            ClientsideEncryptionOptions encryptionOptions)
+//        {
+//            throw new NotImplementedException();
+//        }
+//    }
 }

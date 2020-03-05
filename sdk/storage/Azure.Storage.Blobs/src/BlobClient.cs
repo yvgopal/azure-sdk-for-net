@@ -1011,9 +1011,9 @@ namespace Azure.Storage.Blobs
                 singleUploadThreshold,
                 operationName: $"{nameof(BlobClient)}.{nameof(Upload)}");
 
-            BlobUploadContent transformedContent = async
-                ? await TransformUploadContentAsync(new BlobUploadContent() { Content = content, Metadata = metadata }, cancellationToken).ConfigureAwait(false)
-                : TransformUploadContent(new BlobUploadContent() { Content = content, Metadata = metadata }, cancellationToken);
+            BlobContent transformedContent = async
+                ? await TransformUploadContentAsync(new BlobContent() { Content = content, Metadata = metadata }, cancellationToken).ConfigureAwait(false)
+                : TransformUploadContent(new BlobContent() { Content = content, Metadata = metadata }, cancellationToken);
 
             if (async)
             {
@@ -1036,7 +1036,7 @@ namespace Azure.Storage.Blobs
         /// </param>
         /// <returns>Transformed content stream and metadata.</returns>
         [ForwardsClientCalls]
-        protected virtual BlobUploadContent TransformUploadContent(BlobUploadContent content, CancellationToken cancellationToken = default)
+        protected virtual BlobContent TransformUploadContent(BlobContent content, CancellationToken cancellationToken = default)
         {
             return content; // no-op
         }
@@ -1051,7 +1051,7 @@ namespace Azure.Storage.Blobs
         /// </param>
         /// <returns>Transformed content stream and metadata.</returns>
         [ForwardsClientCalls]
-        protected virtual Task<BlobUploadContent> TransformUploadContentAsync(BlobUploadContent content, CancellationToken cancellationToken = default)
+        protected virtual Task<BlobContent> TransformUploadContentAsync(BlobContent content, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(content); // no-op
         }
