@@ -87,11 +87,11 @@ namespace Azure.Storage.Common.Cryptography
                     read = IV.Length;
                 }
 
-                var getKeyTask = GetContentEncryptionKeyAsync(encryptionData, keyResolver, potentialCachedKeyWrapper, async);
-                var contentEncyptionKey = (async ? await getKeyTask.ConfigureAwait(false) : getKeyTask.EnsureCompleted()).ToArray();
+                var contentEncryptionKey = await GetContentEncryptionKeyAsync(encryptionData, keyResolver, potentialCachedKeyWrapper, async).ConfigureAwait(false);
+
                 plaintext = WrapStream(
                     ciphertext,
-                    contentEncyptionKey,
+                    contentEncryptionKey.ToArray(),
                     encryptionData,
                     IV,
                     noPadding);
@@ -102,95 +102,91 @@ namespace Azure.Storage.Common.Cryptography
             }
 
             return plaintext;
-
+        }
 
 #pragma warning disable CS1587 // XML comment is not placed on a valid language element
-            /// <summary>
-            /// Returns the content encryption key for blob. First tries to get the key encryption key from KeyResolver,
-            /// then falls back to IKey stored on this EncryptionPolicy. Unwraps the content encryption key with the
-            /// correct key wrapper.
-            /// </summary>
-            /// <param name="encryptionData">The encryption data.</param>
-            /// <param name="keyResolver"></param>
-            /// <param name="potentiallyCachedKeyWrapper"></param>
-            /// <param name="async">Whether to perform asynchronously.</param>
-            /// <returns>Encryption key as a byte array.</returns>
-            static async Task<Memory<byte>> GetContentEncryptionKeyAsync(
+        /// <summary>
+        /// Returns the content encryption key for blob. First tries to get the key encryption key from KeyResolver,
+        /// then falls back to IKey stored on this EncryptionPolicy. Unwraps the content encryption key with the
+        /// correct key wrapper.
+        /// </summary>
+        /// <param name="encryptionData">The encryption data.</param>
+        /// <param name="keyResolver"></param>
+        /// <param name="potentiallyCachedKeyWrapper"></param>
+        /// <param name="async">Whether to perform asynchronously.</param>
+        /// <returns>Encryption key as a byte array.</returns>
+        private static async Task<Memory<byte>> GetContentEncryptionKeyAsync(
 #pragma warning restore CS1587 // XML comment is not placed on a valid language element
-                EncryptionData encryptionData,
-                IKeyEncryptionKeyResolver keyResolver,
-                IKeyEncryptionKey potentiallyCachedKeyWrapper,
-                bool async)
+            EncryptionData encryptionData,
+            IKeyEncryptionKeyResolver keyResolver,
+            IKeyEncryptionKey potentiallyCachedKeyWrapper,
+            bool async)
+        {
+            IKeyEncryptionKey key;
+
+            // If we already have a local key and it is the correct one, use that.
+            if (encryptionData.WrappedContentKey.KeyId == potentiallyCachedKeyWrapper?.KeyId)
             {
-                IKeyEncryptionKey key;
-
-                // If we already have a local key and it is the correct one, use that.
-                if (encryptionData.WrappedContentKey.KeyId == potentiallyCachedKeyWrapper?.KeyId)
-                {
-                    key = potentiallyCachedKeyWrapper;
-                }
-                // Otherwise, use the resolver.
-                else if (keyResolver != null)
-                {
-                    var resolveTask = keyResolver.ResolveAsync(encryptionData.WrappedContentKey.KeyId);
-                    key = async
-                        ? await keyResolver.ResolveAsync(encryptionData.WrappedContentKey.KeyId).ConfigureAwait(false)
-                        : keyResolver.Resolve(encryptionData.WrappedContentKey.KeyId);
-                }
-                else
-                {
-                    throw EncryptionErrors.KeyNotFound(encryptionData.WrappedContentKey.KeyId);
-                }
-
-                if (key == default)
-                {
-                    throw EncryptionErrors.NoKeyAccessor();
-                }
-
-                return async
-                    ? await key.UnwrapKeyAsync(
-                        encryptionData.WrappedContentKey.Algorithm,
-                        encryptionData.WrappedContentKey.EncryptedKey).ConfigureAwait(false)
-                    : key.UnwrapKey(
-                        encryptionData.WrappedContentKey.Algorithm,
-                        encryptionData.WrappedContentKey.EncryptedKey);
+                key = potentiallyCachedKeyWrapper;
+            }
+            // Otherwise, use the resolver.
+            else if (keyResolver != null)
+            {
+                var resolveTask = keyResolver.ResolveAsync(encryptionData.WrappedContentKey.KeyId);
+                key = async
+                    ? await keyResolver.ResolveAsync(encryptionData.WrappedContentKey.KeyId).ConfigureAwait(false)
+                    : keyResolver.Resolve(encryptionData.WrappedContentKey.KeyId);
+            }
+            else
+            {
+                throw EncryptionErrors.KeyNotFound(encryptionData.WrappedContentKey.KeyId);
             }
 
+            if (key == default)
+            {
+                throw EncryptionErrors.NoKeyAccessor();
+            }
+
+            return async
+                ? await key.UnwrapKeyAsync(
+                    encryptionData.WrappedContentKey.Algorithm,
+                    encryptionData.WrappedContentKey.EncryptedKey).ConfigureAwait(false)
+                : key.UnwrapKey(
+                    encryptionData.WrappedContentKey.Algorithm,
+                    encryptionData.WrappedContentKey.EncryptedKey);
+        }
 
 #pragma warning disable CS1587 // XML comment is not placed on a valid language element
-            /// <summary>
-            /// Wraps a stream of ciphertext to stream plaintext.
-            /// </summary>
-            /// <param name="contentStream"></param>
-            /// <param name="contentEncryptionKey"></param>
-            /// <param name="encryptionData"></param>
-            /// <param name="iv"></param>
-            /// <param name="noPadding"></param>
-            /// <returns></returns>
-            static Stream WrapStream(Stream contentStream, byte[] contentEncryptionKey,
+        /// <summary>
+        /// Wraps a stream of ciphertext to stream plaintext.
+        /// </summary>
+        /// <param name="contentStream"></param>
+        /// <param name="contentEncryptionKey"></param>
+        /// <param name="encryptionData"></param>
+        /// <param name="iv"></param>
+        /// <param name="noPadding"></param>
+        /// <returns></returns>
+        private static Stream WrapStream(Stream contentStream, byte[] contentEncryptionKey,
 #pragma warning restore CS1587 // XML comment is not placed on a valid language element
-                EncryptionData encryptionData, byte[] iv, bool noPadding)
+            EncryptionData encryptionData, byte[] iv, bool noPadding)
+        {
+            if (encryptionData.EncryptionAgent.EncryptionAlgorithm == ClientSideEncryptionAlgorithm.AesCbc256)
             {
-                if (encryptionData.EncryptionAgent.EncryptionAlgorithm == ClientSideEncryptionAlgorithm.AesCbc256)
+                using (AesCryptoServiceProvider aesProvider = new AesCryptoServiceProvider())
                 {
-                    using (AesCryptoServiceProvider aesProvider = new AesCryptoServiceProvider())
+                    aesProvider.IV = iv ?? encryptionData.ContentEncryptionIV;
+                    aesProvider.Key = contentEncryptionKey;
+
+                    if (noPadding)
                     {
-                        aesProvider.IV = iv ?? encryptionData.ContentEncryptionIV;
-                        aesProvider.Key = contentEncryptionKey;
-
-                        if (noPadding)
-                        {
-                            aesProvider.Padding = PaddingMode.None;
-                        }
-
-                        return new CryptoStream(contentStream, aesProvider.CreateDecryptor(), CryptoStreamMode.Read);
+                        aesProvider.Padding = PaddingMode.None;
                     }
-                }
-                else
-                {
-                    throw EncryptionErrors.BadEncryptionAlgorithm(encryptionData.EncryptionAgent.EncryptionAlgorithm.ToString());
+
+                    return new CryptoStream(contentStream, aesProvider.CreateDecryptor(), CryptoStreamMode.Read);
                 }
             }
+
+            throw EncryptionErrors.BadEncryptionAlgorithm(encryptionData.EncryptionAgent.EncryptionAlgorithm.ToString());
         }
 
         /// <summary>
@@ -216,16 +212,13 @@ namespace Azure.Storage.Common.Cryptography
 
             using (AesCryptoServiceProvider aesProvider = new AesCryptoServiceProvider() { Key = generatedKey })
             {
-                var encryptionDataTask = EncryptionData.CreateInternal(
+                encryptionData = await EncryptionData.CreateInternal(
                     contentEncryptionIv: aesProvider.IV,
                     keyWrapAlgorithm: keyWrapAlgorithm,
                     contentEncryptionKey: generatedKey,
                     keyEncryptionKey: keyWrapper,
                     async: async,
-                    cancellationToken: cancellationToken);
-                encryptionData = async
-                    ? await encryptionDataTask.ConfigureAwait(false)
-                    : encryptionDataTask.EnsureCompleted();
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 ciphertext = new CryptoStream(
                     plaintext,
@@ -259,16 +252,13 @@ namespace Azure.Storage.Common.Cryptography
 
             using (AesCryptoServiceProvider aesProvider = new AesCryptoServiceProvider() { Key = generatedKey })
             {
-                var encryptionDataTask = EncryptionData.CreateInternal(
+                encryptionData = await EncryptionData.CreateInternal(
                     contentEncryptionIv: aesProvider.IV,
                     keyWrapAlgorithm: keyWrapAlgorithm,
                     contentEncryptionKey: generatedKey,
                     keyEncryptionKey: keyWrapper,
                     async: async,
-                    cancellationToken: cancellationToken);
-                encryptionData = async
-                    ? await encryptionDataTask.ConfigureAwait(false)
-                    : encryptionDataTask.EnsureCompleted();
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 var transformStream = new CryptoStream(
                     ciphertext,
@@ -283,6 +273,7 @@ namespace Azure.Storage.Common.Cryptography
                 {
                     plaintext.CopyTo(transformStream);
                 }
+
                 transformStream.FlushFinalBlock();
 
                 bufferedCiphertext = ciphertext.ToArray();

@@ -276,16 +276,12 @@ namespace Azure.Storage.Blobs.Specialized
 
         private async Task<BlobContent> TransformUploadContentInternal(BlobContent content, bool async, CancellationToken cancellationToken)
         {
-            var task = EncryptInternal(
+            (Stream nonSeekableCiphertext, EncryptionData encryptionData) = await EncryptInternal(
                 content.Content,
                 KeyWrapper,
                 KeyWrapAlgorithm,
                 async: async,
-                cancellationToken);
-
-            (Stream nonSeekableCiphertext, EncryptionData encryptionData) = async
-                ? await task.ConfigureAwait(false)
-                : task.EnsureCompleted();
+                cancellationToken).ConfigureAwait(false);
 
             var updatedMetadata = new Dictionary<string, string>(content.Metadata ?? new Dictionary<string, string>(), StringComparer.OrdinalIgnoreCase)
             {
@@ -381,10 +377,7 @@ namespace Azure.Storage.Blobs.Specialized
 
             bool ivInStream = adjustedRange.Offset != 0; //TODO should this check originalRange? tests seem to pass
 
-            var decryptTask = Utility.DecryptInternal(content.Content, encryptionData, ivInStream, KeyResolver, KeyWrapper, CanIgnorePadding(), async);
-            var plaintext = async
-                ? await decryptTask.ConfigureAwait(false)
-                : decryptTask.EnsureCompleted();
+            var plaintext = await Utility.DecryptInternal(content.Content, encryptionData, ivInStream, KeyResolver, KeyWrapper, CanIgnorePadding(), async).ConfigureAwait(false);
 
             // retrim start of stream to original requested location
             // keeping in mind whether we already pulled the IV out of the stream as well
@@ -395,7 +388,7 @@ namespace Azure.Storage.Blobs.Specialized
                 // throw away initial bytes we want to trim off; stream cannot seek into future
                 if (async)
                 {
-                    await plaintext.ReadAsync(new byte[gap], 0, gap).ConfigureAwait(false);
+                    await plaintext.ReadAsync(new byte[gap], 0, gap, cancellationToken).ConfigureAwait(false);
                 }
                 else
                 {
