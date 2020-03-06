@@ -4,20 +4,13 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
+using NUnit.Framework;
 
 namespace Azure.Messaging.ServiceBus.Tests
 {
     public class ServiceBusTestBase
     {
-        protected static string ConnString = Environment.GetEnvironmentVariable("SERVICE_BUS_CONN_STRING", EnvironmentVariableTarget.Machine);
-        protected static string TenantId = Environment.GetEnvironmentVariable("TENANT_ID", EnvironmentVariableTarget.Machine);
-        protected static string ClientId = Environment.GetEnvironmentVariable("CLIENT_ID", EnvironmentVariableTarget.Machine);
-        protected static string ClientSecret = Environment.GetEnvironmentVariable("CLIENT_SECRET", EnvironmentVariableTarget.Machine);
-        protected const string QueueName = "josh";
-        protected const string SessionQueueName = "joshsession";
-        protected const string TopicName = "joshtopic";
-        protected const string Endpoint = "jolovservicebus.servicebus.windows.net";
-
         protected IEnumerable<ServiceBusMessage> GetMessages(int count, string sessionId = null, string partitionKey = null)
         {
             var messages = new List<ServiceBusMessage>();
@@ -26,6 +19,12 @@ namespace Azure.Messaging.ServiceBus.Tests
                 messages.Add(GetMessage(sessionId, partitionKey));
             }
             return messages;
+        }
+
+        protected Task ExceptionHandler(ProcessErrorEventArgs eventArgs)
+        {
+            Assert.Fail(eventArgs.Exception.ToString());
+            return Task.CompletedTask;
         }
 
         protected ServiceBusMessage GetMessage(string sessionId = null, string partitionKey = null)

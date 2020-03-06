@@ -1,7 +1,12 @@
 # Release History
 
+<<<<<<< HEAD
 ## 12.4.0-preview.1
 - Added support for Azure.Storage.Blobs.Encryption package.
+=======
+## 12.4.0-preview.1 (Unreleased)
+
+>>>>>>> 112b26b859f680c9c5b0b5ab8b490dd4a8bd2968
 
 ## 12.3.0 (2020-02)
 - Added support for service version 2019-07-07.

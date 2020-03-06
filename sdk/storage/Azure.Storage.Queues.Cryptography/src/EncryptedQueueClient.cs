@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using Azure.Core;
 using Azure.Core.Cryptography;
+using Azure.Core.Pipeline;
 using Azure.Storage.Common.Cryptography;
 using Azure.Storage.Common.Cryptography.Models;
 using Azure.Storage.Queues.Specialized.Models;

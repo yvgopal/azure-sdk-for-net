@@ -379,7 +379,6 @@ namespace Azure.Storage.Blobs.Specialized
             PartitionedUploader uploader = new PartitionedUploader(
                 client: this,
                 transferOptions: default,
-                singleUploadThreshold: BlockBlobMaxUploadBlobBytes,
                 operationName: $"{nameof(BlockBlobClient)}.{nameof(Upload)}");
 
             return uploader.Upload(
@@ -451,7 +450,6 @@ namespace Azure.Storage.Blobs.Specialized
             PartitionedUploader uploader = new PartitionedUploader(
                 client: this,
                 transferOptions: default,
-                singleUploadThreshold: BlockBlobMaxUploadBlobBytes,
                 operationName: $"{nameof(BlockBlobClient)}.{nameof(Upload)}");
 
             return await uploader.UploadAsync(

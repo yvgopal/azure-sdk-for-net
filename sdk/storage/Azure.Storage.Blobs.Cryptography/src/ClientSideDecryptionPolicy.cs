@@ -78,7 +78,7 @@ namespace Azure.Storage.Blobs.Specialized
         /// <returns></returns>
         public override async ValueTask ProcessAsync(HttpMessage message, ReadOnlyMemory<HttpPipelinePolicy> pipeline)
         {
-            await ProcessInternal(message, pipeline, false).ConfigureAwait(false);
+            await ProcessInternal(message, pipeline, true).ConfigureAwait(false);
         }
 
         private async ValueTask ProcessInternal(HttpMessage message, ReadOnlyMemory<HttpPipelinePolicy> pipeline, bool async)
