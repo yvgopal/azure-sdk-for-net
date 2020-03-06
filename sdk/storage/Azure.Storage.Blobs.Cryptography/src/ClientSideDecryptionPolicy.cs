@@ -108,16 +108,12 @@ namespace Azure.Storage.Blobs.Specialized
                 message.Response.Headers.TryGetValue(Constants.HeaderNames.ContentLength, out var contentLength) &&
                 long.Parse(contentLength, System.Globalization.CultureInfo.InvariantCulture) > 0)
             {
-                var contentStreamTask = DecryptBlobAsync(
+                message.Response.ContentStream = await DecryptBlobAsync(
                     message.Response.ContentStream,
                     ExtractMetadata(message.Response.Headers),
                     encryptedRange,
                     CanIgnorePadding(message.Response.Headers),
-                    async);
-
-                message.Response.ContentStream = async
-                    ? await contentStreamTask.ConfigureAwait(false)
-                    : contentStreamTask.EnsureCompleted();
+                    async).ConfigureAwait(false);
             }
         }
 
@@ -177,10 +173,7 @@ namespace Azure.Storage.Blobs.Specialized
 
             bool ivInStream = encryptedBlobRange.AdjustedRange.Offset != 0; //TODO should this check OriginalRange?
 
-            var decryptTask = Utility.DecryptInternal(ciphertext, encryptionData, ivInStream, KeyResolver, LocalKey, noPadding, async);
-            var plaintext = async
-                ? await decryptTask.ConfigureAwait(false)
-                : decryptTask.EnsureCompleted();
+            var plaintext = await Utility.DecryptInternal(ciphertext, encryptionData, ivInStream, KeyResolver, LocalKey, noPadding, async).ConfigureAwait(false);
 
             // retrim start of stream to original requested location
             // keeping in mind whether we already pulled the IV out of the stream as well
