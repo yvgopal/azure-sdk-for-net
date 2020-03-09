@@ -52,3 +52,6 @@ stages:
       safeName: AzureStorageFilesDataLake
     - name: Azure.Storage.Queues
       safeName: AzureStorageQueues
+    # This is for a private drop, do not merge to master.
+    - name: Azure.Storage.QuickQuery
+      safeName: AzureStorageQuickQuery

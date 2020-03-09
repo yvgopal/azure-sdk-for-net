@@ -301,6 +301,7 @@ namespace Azure.Storage
 
             public const string Data = "data";
             public const string BytesScanned = "bytesScanned";
+            public const string TotalBytes = "totalBytes";
             public const string Fatal = "fatal";
             public const string Name = "name";
             public const string Description = "description";

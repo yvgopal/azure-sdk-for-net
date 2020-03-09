@@ -123,11 +123,12 @@ namespace Azure.Storage.QuickQuery.Tests
             Assert.AreEqual(expected, actual);
 
             // Check progress reporter
-            Assert.AreEqual(4, progressReporter.List.Count);
+            Assert.AreEqual(5, progressReporter.List.Count);
             Assert.AreEqual(4 * Constants.MB, progressReporter.List[0]);
             Assert.AreEqual(8 * Constants.MB, progressReporter.List[1]);
             Assert.AreEqual(12 * Constants.MB, progressReporter.List[2]);
             Assert.AreEqual(16 * Constants.MB, progressReporter.List[3]);
+            Assert.AreEqual(16 * Constants.MB, progressReporter.List[4]);
         }
 
         [Test]
@@ -152,8 +153,9 @@ namespace Azure.Storage.QuickQuery.Tests
             using StreamReader streamReader = new StreamReader(response.Value.Content);
             await streamReader.ReadToEndAsync();
 
-            Assert.AreEqual(1, progressReporter.List.Count);
+            Assert.AreEqual(2, progressReporter.List.Count);
             Assert.AreEqual(Constants.KB, progressReporter.List[0]);
+            Assert.AreEqual(Constants.KB, progressReporter.List[1]);
         }
 
         [Test]
@@ -228,7 +230,7 @@ namespace Azure.Storage.QuickQuery.Tests
 
             response = await queryClient.QueryAsync(
                 query,
-                nonFatalErrorReceiver: new NonFatalErrorReceiver(expectedBlobQueryError));
+                errorReceiver: new ErrorReceiver(expectedBlobQueryError));
             using StreamReader streamReader2 = new StreamReader(response.Value.Content);
             s = await streamReader2.ReadToEndAsync();
         }
@@ -250,16 +252,29 @@ namespace Azure.Storage.QuickQuery.Tests
                 RecordSeparator = '\n'
             };
 
-            // Act
+            // Act - with no IBlobQueryErrorReceiver
             Response<BlobDownloadInfo> response = await queryClient.QueryAsync(
                 query,
                 inputTextConfiguration: jsonTextConfiguration);
-
             using StreamReader streamReader = new StreamReader(response.Value.Content);
+            string s = await streamReader.ReadToEndAsync();
 
-            TestHelper.AssertExpectedException<RequestFailedException>(
-                () => streamReader.ReadToEnd(),
-                new RequestFailedException("Fatal Quick Query Error\nName: ParseError\nDescription: Unexpected token ',' at [byte: 3]. Expecting tokens '{', or '['.\nPosition: 0"));
+            // Act - with  IBlobQueryErrorReceiver
+            BlobQueryError expectedBlobQueryError = new BlobQueryError
+            {
+                IsFatal = true,
+                Name = "ParseError",
+                Description = "Unexpected token ',' at [byte: 3]. Expecting tokens '{', or '['.",
+                Position = 0
+            };
+
+            response = await queryClient.QueryAsync(
+                query,
+                inputTextConfiguration: jsonTextConfiguration,
+                errorReceiver: new ErrorReceiver(expectedBlobQueryError));
+            using StreamReader streamReader2 = new StreamReader(response.Value.Content);
+            s = await streamReader2.ReadToEndAsync();
+
         }
 
         [Test]
@@ -390,11 +405,12 @@ namespace Azure.Storage.QuickQuery.Tests
             public string LeaseId { get; set; }
         }
 
-        private class NonFatalErrorReceiver : IBlobQueryErrorReceiver
+        private class ErrorReceiver
+            : IBlobQueryErrorReceiver
         {
             private readonly BlobQueryError _expectedBlobQueryError;
 
-            public NonFatalErrorReceiver(BlobQueryError expected)
+            public ErrorReceiver(BlobQueryError expected)
             {
                 _expectedBlobQueryError = expected;
             }

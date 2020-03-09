@@ -20,7 +20,7 @@ namespace Azure.Storage.QuickQuery
         internal int _bufferOffset;
         internal int _bufferLength;
         internal IProgress<long> _ProgressHandler;
-        internal IBlobQueryErrorReceiver _nonFatalErrorHandler;
+        internal IBlobQueryErrorReceiver _errorHandler;
 
         public BlobQuickQueryStream(
             Stream avroStream,
@@ -34,7 +34,7 @@ namespace Azure.Storage.QuickQuery
             _bufferOffset = 0;
             _bufferLength = 0;
             _ProgressHandler = progressHandler;
-            _nonFatalErrorHandler = nonFatalErrorHandler;
+            _errorHandler = nonFatalErrorHandler;
         }
 
         /// <inheritdoc/>
@@ -151,6 +151,11 @@ namespace Azure.Storage.QuickQuery
 
                     // End Record
                     case Constants.QuickQuery.EndRecordName:
+                        if (_ProgressHandler != default)
+                        {
+                            record.TryGetValue(Constants.QuickQuery.TotalBytes, out object progress);
+                            _ProgressHandler.Report((long)progress);
+                        }
                         return 0;
                 }
             }
@@ -213,24 +218,16 @@ namespace Azure.Storage.QuickQuery
             record.TryGetValue(Constants.QuickQuery.Description, out object description);
             record.TryGetValue(Constants.QuickQuery.Position, out object position);
 
-            if ((bool)fatal)
+            if (_errorHandler != null)
             {
-                throw new RequestFailedException(
-                    $"Fatal Quick Query Error\nName: {(string)name}\nDescription: {(string)description}\nPosition: {(long)position}");
-            }
-            else
-            {
-                if (_nonFatalErrorHandler != null)
+                BlobQueryError blobQueryError = new BlobQueryError
                 {
-                    BlobQueryError blobQueryError = new BlobQueryError
-                    {
-                        IsFatal = false,
-                        Name = (string)name,
-                        Description = (string)description,
-                        Position = (long)position
-                    };
-                    _nonFatalErrorHandler.ReportError(blobQueryError);
-                }
+                    IsFatal = false,
+                    Name = (string)name,
+                    Description = (string)description,
+                    Position = (long)position
+                };
+                _errorHandler.ReportError(blobQueryError);
             }
         }
     }

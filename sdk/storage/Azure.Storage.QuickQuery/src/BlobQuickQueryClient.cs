@@ -147,8 +147,8 @@ namespace Azure.Storage.QuickQuery
         /// <param name="outputTextConfiguration">
         /// Optional output text configuration.
         /// </param>
-        /// <param name="nonFatalErrorReceiver">
-        /// Optional non-fatal error receiver.
+        /// <param name="errorReceiver">
+        /// Optional error receiver.
         /// </param>
         /// <param name="conditions">
         /// Optional request conditions.
@@ -171,7 +171,7 @@ namespace Azure.Storage.QuickQuery
             string query,
             BlobQueryTextConfiguration inputTextConfiguration = default,
             BlobQueryTextConfiguration outputTextConfiguration = default,
-            IBlobQueryErrorReceiver nonFatalErrorReceiver = default,
+            IBlobQueryErrorReceiver errorReceiver = default,
             BlobRequestConditions conditions = default,
             IProgress<long> progressReceiver = default,
             CancellationToken cancellationToken = default) =>
@@ -179,7 +179,7 @@ namespace Azure.Storage.QuickQuery
                 query,
                 inputTextConfiguration,
                 outputTextConfiguration,
-                nonFatalErrorReceiver,
+                errorReceiver,
                 conditions,
                 progressReceiver,
                 async: false,
@@ -199,8 +199,8 @@ namespace Azure.Storage.QuickQuery
         /// <param name="outputTextConfiguration">
         /// Optional output text configuration.
         /// </param>
-        /// <param name="nonFatalErrorReceiver">
-        /// Optional non-fatal error receiver.
+        /// <param name="errorReceiver">
+        /// Optional error receiver.
         /// </param>
         /// <param name="conditions">
         /// Optional request conditions.
@@ -223,7 +223,7 @@ namespace Azure.Storage.QuickQuery
             string query,
             BlobQueryTextConfiguration inputTextConfiguration = default,
             BlobQueryTextConfiguration outputTextConfiguration = default,
-            IBlobQueryErrorReceiver nonFatalErrorReceiver = default,
+            IBlobQueryErrorReceiver errorReceiver = default,
             BlobRequestConditions conditions = default,
             IProgress<long> progressReceiver = default,
             CancellationToken cancellationToken = default) =>
@@ -231,7 +231,7 @@ namespace Azure.Storage.QuickQuery
                 query,
                 inputTextConfiguration,
                 outputTextConfiguration,
-                nonFatalErrorReceiver,
+                errorReceiver,
                 conditions,
                 progressReceiver,
                 async: true,
