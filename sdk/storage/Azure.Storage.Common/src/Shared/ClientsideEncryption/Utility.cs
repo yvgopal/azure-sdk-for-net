@@ -65,7 +65,7 @@ namespace Azure.Storage.Common.Cryptography
             bool async)
         {
             Stream plaintext;
-            int read = 0;
+            //int read = 0;
             if (encryptionData != default)
             {
                 byte[] IV;
@@ -84,7 +84,7 @@ namespace Azure.Storage.Common.Cryptography
                     {
                         ciphertext.Read(IV, 0, IV.Length);
                     }
-                    read = IV.Length;
+                    //read = IV.Length;
                 }
 
                 var contentEncryptionKey = await GetContentEncryptionKeyAsync(encryptionData, keyResolver, potentialCachedKeyWrapper, async).ConfigureAwait(false);

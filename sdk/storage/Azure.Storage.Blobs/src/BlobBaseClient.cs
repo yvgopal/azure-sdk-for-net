@@ -848,9 +848,10 @@ namespace Azure.Storage.Blobs.Specialized
                 Metadata = response.Value.Metadata
             };
             blobContent = async
-                ? await TransformDownloadSliceContentAsync(blobContent, requestedRangeWithRetryLogic, transformedRange, cancellationToken).ConfigureAwait(false)
-                : TransformDownloadSliceContent(blobContent, requestedRangeWithRetryLogic, transformedRange, cancellationToken);
+                ? await TransformDownloadSliceContentAsync(blobContent, requestedRangeWithRetryLogic, response.Value.ContentRange, cancellationToken).ConfigureAwait(false)
+                : TransformDownloadSliceContent(blobContent, requestedRangeWithRetryLogic, response.Value.ContentRange, cancellationToken);
             stream = blobContent.Content;
+            response.Value.Content = blobContent.Content;
             response.Value.Metadata = blobContent.Metadata;
 
             return (response, stream);
@@ -1284,9 +1285,9 @@ namespace Azure.Storage.Blobs.Specialized
             bool async = true,
             CancellationToken cancellationToken = default)
         {
-            var client = new BlobBaseClient(Uri, Pipeline, AuthenticationPolicy, SourceOptions);
+            //var client = new BlobBaseClient(Uri, Pipeline, AuthenticationPolicy, SourceOptions);
 
-            PartitionedDownloader downloader = new PartitionedDownloader(client, transferOptions);
+            PartitionedDownloader downloader = new PartitionedDownloader(this, transferOptions);
 
             if (async)
             {
@@ -3039,13 +3040,13 @@ namespace Azure.Storage.Blobs.Specialized
         /// </summary>
         /// <param name="content">Content of this download slice.</param>
         /// <param name="originalRange">Orignially requested range of the slice.</param>
-        /// <param name="adjustedRange">Adjusted range of the slice, as determined by <see cref="TransformDownloadSliceRange"/>.</param>
+        /// <param name="receivedContentRange">Content range that came back form the service.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>Transformed content.</returns>
         protected virtual BlobContent TransformDownloadSliceContent(
             BlobContent content,
             HttpRange originalRange,
-            HttpRange adjustedRange,
+            string receivedContentRange,
             CancellationToken cancellationToken = default)
         {
             return content; // no-op
@@ -3056,13 +3057,13 @@ namespace Azure.Storage.Blobs.Specialized
         /// </summary>
         /// <param name="content">Content of this download slice.</param>
         /// <param name="originalRange">Orignially requested range of the slice.</param>
-        /// <param name="adjustedRange">Adjusted range of the slice, as determined by <see cref="TransformDownloadSliceRange"/>.</param>
+        /// <param name="receivedContentRange">Content range that came back form the service.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>Transformed content.</returns>
         protected virtual Task<BlobContent> TransformDownloadSliceContentAsync(
             BlobContent content,
             HttpRange originalRange,
-            HttpRange adjustedRange,
+            string receivedContentRange,
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(content); // no-op

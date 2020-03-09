@@ -12,12 +12,12 @@ namespace Azure.Storage.Blobs.Models
     public class BlobContent
     {
         /// <summary>
-        /// Content stream to upload.
+        /// Blob content stream.
         /// </summary>
         public Stream Content { get; set; }
 
         /// <summary>
-        /// Content metadata to upload.
+        /// Blob metadata.
         /// </summary>
         public Metadata Metadata { get; set; }
     }

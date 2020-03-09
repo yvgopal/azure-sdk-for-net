@@ -91,9 +91,7 @@ namespace Azure.Storage.Blobs.Specialized
                   connectionString,
                   blobContainerName,
                   blobName,
-                  options.WithPolicy(new ClientSideDecryptionPolicy(
-                      encryptionOptions.KeyResolver,
-                      encryptionOptions.KeyEncryptionKey)))
+                  options)
         {
             KeyWrapper = encryptionOptions.KeyEncryptionKey;
             KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
@@ -124,9 +122,7 @@ namespace Azure.Storage.Blobs.Specialized
             BlobClientOptions options = default)
             : base(
                   blobUri,
-                  options.WithPolicy(new ClientSideDecryptionPolicy(
-                      encryptionOptions.KeyResolver,
-                      encryptionOptions.KeyEncryptionKey)))
+                  options)
         {
             KeyWrapper = encryptionOptions.KeyEncryptionKey;
             KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
@@ -162,9 +158,7 @@ namespace Azure.Storage.Blobs.Specialized
             : base(
                   blobUri,
                   credential,
-                  options.WithPolicy(new ClientSideDecryptionPolicy(
-                      encryptionOptions.KeyResolver,
-                      encryptionOptions.KeyEncryptionKey)))
+                  options)
         {
             KeyWrapper = encryptionOptions.KeyEncryptionKey;
             KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
@@ -200,9 +194,7 @@ namespace Azure.Storage.Blobs.Specialized
             : base(
                   blobUri,
                   credential,
-                  options.WithPolicy(new ClientSideDecryptionPolicy(
-                      encryptionOptions.KeyResolver,
-                      encryptionOptions.KeyEncryptionKey)))
+                  options)
         {
             KeyWrapper = encryptionOptions.KeyEncryptionKey;
             KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
@@ -326,48 +318,44 @@ namespace Azure.Storage.Blobs.Specialized
             return new EncryptedBlobRange(range).AdjustedRange;
         }
 
-        /// <summary>
-        /// Transforms the content of an individual REST download, not an overall multipart download.
-        /// </summary>
-        /// <param name="content">Content of this download slice.</param>
-        /// <param name="originalRange">Orignially requested range of the slice.</param>
-        /// <param name="adjustedRange">Adjusted range of the slice, as determined by <see cref="TransformDownloadSliceRange"/>.</param>
-        /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>Transformed content.</returns>
+        /// <inheritdoc/>
         protected override BlobContent TransformDownloadSliceContent(
             BlobContent content,
             HttpRange originalRange,
-            HttpRange adjustedRange,
+            string receivedContentRange,
             CancellationToken cancellationToken = default)
-        {
-            return content; // no-op
-        }
+            => TransformDownloadSliceContentInternal(
+                content,
+                originalRange,
+                receivedContentRange,
+                false,
+                cancellationToken).EnsureCompleted();
 
-        /// <summary>
-        /// Transforms the content of an individual REST download asyncronously, not an overall multipart download.
-        /// </summary>
-        /// <param name="content">Content of this download slice.</param>
-        /// <param name="originalRange">Orignially requested range of the slice.</param>
-        /// <param name="adjustedRange">Adjusted range of the slice, as determined by <see cref="TransformDownloadSliceRange"/>.</param>
-        /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns>Transformed content.</returns>
-        protected override Task<BlobContent> TransformDownloadSliceContentAsync(
+        /// <inheritdoc/>
+        protected override async Task<BlobContent> TransformDownloadSliceContentAsync(
             BlobContent content,
             HttpRange originalRange,
-            HttpRange adjustedRange,
+            string receivedContentRange,
             CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(content); // no-op
-        }
+            => await TransformDownloadSliceContentInternal(
+                content,
+                originalRange,
+                receivedContentRange,
+                true,
+                cancellationToken).ConfigureAwait(false);
 
         private async Task<BlobContent> TransformDownloadSliceContentInternal(
             BlobContent content,
             HttpRange originalRange,
-            HttpRange adjustedRange,
+            string receivedContentRange,
             bool async,
             CancellationToken cancellationToken)
         {
             AssertKeyAccessPresent();
+
+            ContentRange? contentRange = string.IsNullOrWhiteSpace(receivedContentRange)
+                ? default
+                : ContentRange.Parse(receivedContentRange);
 
             EncryptionData encryptionData = GetAndValidateEncryptionData(content.Metadata);
             if (encryptionData == default)
@@ -375,13 +363,20 @@ namespace Azure.Storage.Blobs.Specialized
                 return content; // TODO readjust range
             }
 
-            bool ivInStream = adjustedRange.Offset != 0; //TODO should this check originalRange? tests seem to pass
+            bool ivInStream = originalRange.Offset >= 16; // TODO should this check originalRange? tests seem to pass
 
-            var plaintext = await Utility.DecryptInternal(content.Content, encryptionData, ivInStream, KeyResolver, KeyWrapper, CanIgnorePadding(), async).ConfigureAwait(false);
+            var plaintext = await Utility.DecryptInternal(
+                content.Content,
+                encryptionData,
+                ivInStream,
+                KeyResolver,
+                KeyWrapper,
+                CanIgnorePadding(contentRange),
+                async).ConfigureAwait(false);
 
             // retrim start of stream to original requested location
             // keeping in mind whether we already pulled the IV out of the stream as well
-            int gap = (int)(originalRange.Offset - adjustedRange.Offset)
+            int gap = (int)(originalRange.Offset - (contentRange?.Start ?? 0))
                 - (ivInStream ? EncryptionConstants.EncryptionBlockSize : 0);
             if (gap > 0)
             {
@@ -442,30 +437,31 @@ namespace Azure.Storage.Blobs.Specialized
         /// <summary>
         /// Gets whether to ignore padding options for decryption.
         /// </summary>
-        /// <param name="headers">Response headers for the download.</param>
+        /// <param name="contentRange">Downloaded content range.</param>
         /// <returns>True if we should ignore padding.</returns>
         /// <remarks>
         /// If the last cipher block of the blob was returned, we need the padding. Otherwise, we can ignore it.
         /// </remarks>
-        private static bool CanIgnorePadding(ResponseHeaders headers)
+        private static bool CanIgnorePadding(ContentRange? contentRange)
         {
             // if Content-Range not present, we requested the whole blob
-            if (!headers.TryGetValue(Constants.HeaderNames.ContentRange, out string contentRange))
+            if (!contentRange.HasValue)
             {
                 return false;
             }
 
-            // parse header value (e.g. "bytes <start>-<end>/<blobSize>")
-            // end is the inclusive last byte; e.g. header "bytes 0-7/8" is the entire 8-byte blob
-            var tokens = contentRange.Split(new char[] { ' ', '-', '/' }); // ["bytes", "<start>", "<end>", "<blobSize>"]
-            if (tokens.Length < 4)
+            // if range is wildcard, we requested the whole blob
+            if (!contentRange.Value.End.HasValue)
             {
-                throw Errors.ParsingHttpRangeFailed();
+                return false;
             }
 
+            // blob storage will always return ContentRange.Size
+            // we don't have to worry about the impossible decision of what to do if it doesn't
+
             // did we request the last block?
-            if (long.Parse(tokens[3], System.Globalization.CultureInfo.InvariantCulture) -
-                long.Parse(tokens[2], System.Globalization.CultureInfo.InvariantCulture) < EncryptionConstants.EncryptionBlockSize)
+            // end is inclusive/0-index, so end = n and size = n+1 means we requested the last block
+            if (contentRange.Value.Size - contentRange.Value.End == 1)
             {
                 return false;
             }
