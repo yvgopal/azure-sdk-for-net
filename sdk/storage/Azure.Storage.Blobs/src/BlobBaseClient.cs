@@ -838,21 +838,25 @@ namespace Azure.Storage.Blobs.Specialized
                     .ConfigureAwait(false);
 
             // Watch out for exploding Responses
-            long length = response.IsUnavailable() ? 0 : response.Value.ContentLength;
-            Pipeline.LogTrace($"Response: {response.GetRawResponse().Status}, ContentLength: {length}");
-
-            // apply transformations to the content
-            var blobContent = new BlobContent()
+            long length = 0;
+            if (!response.IsUnavailable())
             {
-                Content = stream,
-                Metadata = response.Value.Metadata
-            };
-            blobContent = async
-                ? await TransformDownloadSliceContentAsync(blobContent, requestedRangeWithRetryLogic, response.Value.ContentRange, cancellationToken).ConfigureAwait(false)
-                : TransformDownloadSliceContent(blobContent, requestedRangeWithRetryLogic, response.Value.ContentRange, cancellationToken);
-            stream = blobContent.Content;
-            response.Value.Content = blobContent.Content;
-            response.Value.Metadata = blobContent.Metadata;
+                length = response.Value.ContentLength;
+
+                // apply transformations to the content
+                var blobContent = new BlobContent()
+                {
+                    Content = stream,
+                    Metadata = response.Value.Metadata
+                };
+                blobContent = async
+                    ? await TransformDownloadSliceContentAsync(blobContent, requestedRangeWithRetryLogic, response.Value.ContentRange, cancellationToken).ConfigureAwait(false)
+                    : TransformDownloadSliceContent(blobContent, requestedRangeWithRetryLogic, response.Value.ContentRange, cancellationToken);
+                stream = blobContent.Content;
+                response.Value.Content = blobContent.Content;
+                response.Value.Metadata = blobContent.Metadata;
+            }
+            Pipeline.LogTrace($"Response: {response.GetRawResponse().Status}, ContentLength: {length}");
 
             return (response, stream);
         }
