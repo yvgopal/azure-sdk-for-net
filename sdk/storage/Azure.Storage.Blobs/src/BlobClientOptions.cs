@@ -58,6 +58,12 @@ namespace Azure.Storage.Blobs
         public string EncryptionScope { get; set; }
 
         /// <summary>
+        /// Gets or sets the <see cref="Models.TransactionalHashOptions"/> to be used
+        /// when making requests.
+        /// </summary>
+        public TransactionalHashOptions TransactionalHashOptions { get; set; }
+
+        /// <summary>
         /// Gets or sets the secondary storage <see cref="Uri"/> that can be read from for the storage account if the
         /// account is enabled for RA-GRS.
         ///
