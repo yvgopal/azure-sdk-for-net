@@ -374,12 +374,10 @@ namespace Azure.Storage.Blobs
         /// <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/create-account-sas"/>
         /// </summary>
         /// <param name="blobSasSignatureValues">The values to construct the SAS with.</param>
+        /// <param name="credential">Storage credential to sign with.</param>
         /// <returns>The URI query string representing the SAS token, WITHOUT a prepended "?".</returns>
-        /// <exception cref="InvalidOperationException">
-        /// Thrown when this client is not authenticated with a <see cref="StorageSharedKeyCredential"/>.
-        /// </exception>
 #pragma warning disable CA1801, CA1822 // dev supression for stub API review
-        public string GenerateSas(AccountSasSignatureValues blobSasSignatureValues)
+        public string GenerateSas(AccountSasSignatureValues blobSasSignatureValues, StorageSharedKeyCredential credential)
             => throw new NotImplementedException();
 #pragma warning disable CA1801, CA1822 // dev supression for stub API review
 

@@ -200,16 +200,16 @@ namespace Azure.Storage.Blobs.Specialized
             KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
         }
 
-        private EncryptedBlobClient(
-            Uri blobUri,
-            ClientsideEncryptionOptions encryptionOptions,
-            HttpPipelinePolicy authentication,
-            BlobClientOptions options)
-            : base(blobUri, authentication, options)
-        {
-            KeyWrapper = encryptionOptions.KeyEncryptionKey;
-            KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
-        }
+        //private EncryptedBlobClient(
+        //    Uri blobUri,
+        //    ClientsideEncryptionOptions encryptionOptions,
+        //    HttpPipelinePolicy authentication,
+        //    BlobClientOptions options)
+        //    : base(blobUri, authentication, options)
+        //{
+        //    KeyWrapper = encryptionOptions.KeyEncryptionKey;
+        //    KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
+        //}
 
         //TODO uncomment upon Azure.Core.ClientOptions "clone with modifications" support
         ///// <summary>

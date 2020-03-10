@@ -171,29 +171,6 @@ namespace Azure.Storage.Blobs
             : base(blobUri, pipeline, authentication, options)
         {
         }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="BlobClient"/>
-        /// class.
-        /// </summary>
-        /// <param name="blobUri">
-        /// A <see cref="Uri"/> referencing the blob that includes the
-        /// name of the account, the name of the container, and the name of
-        /// the blob.
-        /// This is likely to be similar to "https://{account_name}.blob.core.windows.net/{container_name}/{blob_name}".
-        /// </param>
-        /// <param name="authentication">
-        /// An optional authentication policy used to sign requests.
-        /// </param>
-        /// <param name="options">
-        /// Optional client options that define the transport pipeline
-        /// policies for authentication, retries, etc., that are applied to
-        /// every request.
-        /// </param>
-        protected BlobClient(Uri blobUri, HttpPipelinePolicy authentication, BlobClientOptions options)
-            : base(blobUri, authentication, options)
-        {
-        }
         #endregion ctors
 
         #region Upload
