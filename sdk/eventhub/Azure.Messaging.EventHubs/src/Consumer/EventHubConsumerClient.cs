@@ -9,6 +9,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -116,6 +117,8 @@ namespace Azure.Messaging.EventHubs.Consumer
         ///   Event Hub will result in a connection string that contains the name.
         /// </remarks>
         ///
+        /// <seealso href="https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string"/>
+        ///
         public EventHubConsumerClient(string consumerGroup,
                                       string connectionString) : this(consumerGroup, connectionString, null, null)
         {
@@ -138,6 +141,8 @@ namespace Azure.Messaging.EventHubs.Consumer
         ///   Event Hub will result in a connection string that contains the name.
         /// </remarks>
         ///
+        /// <seealso href="https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string"/>
+        ///
         public EventHubConsumerClient(string consumerGroup,
                                       string connectionString,
                                       EventHubConsumerClientOptions clientOptions) : this(consumerGroup, connectionString, null, clientOptions)
@@ -157,6 +162,8 @@ namespace Azure.Messaging.EventHubs.Consumer
         ///   and can be used directly without passing the <paramref name="eventHubName" />.  The name of the Event Hub should be
         ///   passed only once, either as part of the connection string or separately.
         /// </remarks>
+        ///
+        /// <seealso href="https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string"/>
         ///
         public EventHubConsumerClient(string consumerGroup,
                                       string connectionString,
@@ -178,6 +185,8 @@ namespace Azure.Messaging.EventHubs.Consumer
         ///   and can be used directly without passing the <paramref name="eventHubName" />.  The name of the Event Hub should be
         ///   passed only once, either as part of the connection string or separately.
         /// </remarks>
+        ///
+        /// <seealso href="https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string"/>
         ///
         public EventHubConsumerClient(string consumerGroup,
                                       string connectionString,
@@ -753,7 +762,7 @@ namespace Azure.Messaging.EventHubs.Consumer
                     if (observedException != default)
                     {
                         EventHubsEventSource.Log.PublishPartitionEventsToChannelError(EventHubName, partitionId, observedException.Message);
-                        throw observedException;
+                        ExceptionDispatchInfo.Capture(observedException).Throw();
                     }
                 }
                 finally
