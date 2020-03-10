@@ -175,20 +175,18 @@ namespace Azure.Storage.Blobs.Specialized
         /// <param name="pipeline">
         /// The transport pipeline used to send every request.
         /// </param>
-        /// <param name="version">
-        /// The version of the service to use when sending requests.
+        /// <param name="authentication">
+        /// The authentication policy that was used in the given pipeline, for tracking purposes.
         /// </param>
-        /// <param name="clientDiagnostics">Client diagnostics.</param>
-        /// <param name="customerProvidedKey">Customer provided key.</param>
-        /// <param name="encryptionScope">Encryption scope.</param>
-        internal PageBlobClient(
-            Uri blobUri,
-            HttpPipeline pipeline,
-            BlobClientOptions.ServiceVersion version,
-            ClientDiagnostics clientDiagnostics,
-            CustomerProvidedKey? customerProvidedKey,
-            string encryptionScope)
-            : base(blobUri, pipeline, version, clientDiagnostics, customerProvidedKey, encryptionScope)
+        /// <param name="options">
+        /// The options used to construct the given pipeline, for tracking purposes.
+        /// </param>
+        /// <remarks>
+        /// This constructor is intended for existing clients to pass on their
+        /// pipeline when creating new clients.
+        /// </remarks>
+        internal PageBlobClient(Uri blobUri, HttpPipeline pipeline, HttpPipelinePolicy authentication, BlobClientOptions options)
+            : base(blobUri, pipeline, authentication, options)
         {
         }
         #endregion ctors
@@ -218,8 +216,7 @@ namespace Azure.Storage.Blobs.Specialized
         protected sealed override BlobBaseClient WithSnapshotCore(string snapshot)
         {
             var builder = new BlobUriBuilder(Uri) { Snapshot = snapshot };
-
-            return new PageBlobClient(builder.ToUri(), Pipeline, Version, ClientDiagnostics, CustomerProvidedKey, EncryptionScope);
+            return new PageBlobClient(builder.ToUri(), Pipeline, AuthenticationPolicy, SourceOptions);
         }
 
         ///// <summary>
@@ -2279,13 +2276,7 @@ namespace Azure.Storage.Blobs.Specialized
                 try
                 {
                     // Create copySource Uri
-                    PageBlobClient pageBlobUri = new PageBlobClient(
-                        sourceUri,
-                        Pipeline,
-                        Version,
-                        ClientDiagnostics,
-                        CustomerProvidedKey,
-                        EncryptionScope).WithSnapshot(snapshot);
+                    PageBlobClient pageBlobUri = new PageBlobClient(sourceUri, Pipeline, AuthenticationPolicy, SourceOptions).WithSnapshot(snapshot);
 
                     return await BlobRestClient.PageBlob.CopyIncrementalAsync(
                         ClientDiagnostics,
@@ -2614,9 +2605,7 @@ namespace Azure.Storage.Blobs.Specialized
             new PageBlobClient(
                 client.Uri.AppendToPath(blobName),
                 client.Pipeline,
-                client.Version,
-                client.ClientDiagnostics,
-                client.CustomerProvidedKey,
-                client.EncryptionScope);
+                client.AuthenticationPolicy,
+                client.SourceOptions);
     }
 }

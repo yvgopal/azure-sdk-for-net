@@ -157,20 +157,41 @@ namespace Azure.Storage.Blobs
         /// <param name="pipeline">
         /// The transport pipeline used to send every request.
         /// </param>
-        /// <param name="version">
-        /// The version of the service to use when sending requests.
+        /// <param name="authentication">
+        /// The authentication policy that was used in the given pipeline, for tracking purposes.
         /// </param>
-        /// <param name="clientDiagnostics">Client diagnostics.</param>
-        /// <param name="customerProvidedKey">Customer provided key.</param>
-        /// <param name="encryptionScope">Encryption scope.</param>
-        internal BlobClient(
-            Uri blobUri,
-            HttpPipeline pipeline,
-            BlobClientOptions.ServiceVersion version,
-            ClientDiagnostics clientDiagnostics,
-            CustomerProvidedKey? customerProvidedKey,
-            string encryptionScope)
-            : base(blobUri, pipeline, version, clientDiagnostics, customerProvidedKey, encryptionScope)
+        /// <param name="options">
+        /// The options used to construct the given pipeline, for tracking purposes.
+        /// </param>
+        /// <remarks>
+        /// This constructor is intended for existing clients to pass on their
+        /// pipeline when creating new clients.
+        /// </remarks>
+        internal BlobClient(Uri blobUri, HttpPipeline pipeline, HttpPipelinePolicy authentication, BlobClientOptions options)
+            : base(blobUri, pipeline, authentication, options)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BlobClient"/>
+        /// class.
+        /// </summary>
+        /// <param name="blobUri">
+        /// A <see cref="Uri"/> referencing the blob that includes the
+        /// name of the account, the name of the container, and the name of
+        /// the blob.
+        /// This is likely to be similar to "https://{account_name}.blob.core.windows.net/{container_name}/{blob_name}".
+        /// </param>
+        /// <param name="authentication">
+        /// An optional authentication policy used to sign requests.
+        /// </param>
+        /// <param name="options">
+        /// Optional client options that define the transport pipeline
+        /// policies for authentication, retries, etc., that are applied to
+        /// every request.
+        /// </param>
+        protected BlobClient(Uri blobUri, HttpPipelinePolicy authentication, BlobClientOptions options)
+            : base(blobUri, authentication, options)
         {
         }
         #endregion ctors
@@ -806,7 +827,6 @@ namespace Azure.Storage.Blobs
         /// A <see cref="RequestFailedException"/> will be thrown if
         /// a failure occurs.
         /// </remarks>
-        [ForwardsClientCalls]
         public virtual Task<Response<BlobContentInfo>> UploadAsync(
             Stream content,
             BlobHttpHeaders httpHeaders = default,
@@ -878,7 +898,6 @@ namespace Azure.Storage.Blobs
         /// A <see cref="RequestFailedException"/> will be thrown if
         /// a failure occurs.
         /// </remarks>
-        [ForwardsClientCalls]
         public virtual async Task<Response<BlobContentInfo>> UploadAsync(
             string path,
             BlobHttpHeaders httpHeaders = default,
@@ -962,22 +981,27 @@ namespace Azure.Storage.Blobs
             bool async = true,
             CancellationToken cancellationToken = default)
         {
-            var client = new BlockBlobClient(Uri, Pipeline, Version, ClientDiagnostics, CustomerProvidedKey, EncryptionScope);
+            var client = new BlockBlobClient(Uri, Pipeline, AuthenticationPolicy, SourceOptions);
 
             PartitionedUploader uploader = new PartitionedUploader(
                 client,
                 transferOptions,
                 operationName: $"{nameof(BlobClient)}.{nameof(Upload)}");
 
+            BlobContent transformedContent = async
+                ? await TransformUploadContentAsync(new BlobContent() { Content = content, Metadata = metadata }, cancellationToken).ConfigureAwait(false)
+                : TransformUploadContent(new BlobContent() { Content = content, Metadata = metadata }, cancellationToken);
+
             if (async)
             {
-                return await uploader.UploadAsync(content, blobHttpHeaders, metadata, conditions, progressHandler, accessTier, cancellationToken).ConfigureAwait(false);
+                return await uploader.UploadAsync(transformedContent.Content, blobHttpHeaders, transformedContent.Metadata, conditions, progressHandler, accessTier, cancellationToken).ConfigureAwait(false);
             }
             else
             {
-                return uploader.Upload(content, blobHttpHeaders, metadata, conditions, progressHandler, accessTier, cancellationToken);
+                return uploader.Upload(transformedContent.Content, blobHttpHeaders, transformedContent.Metadata, conditions, progressHandler, accessTier, cancellationToken);
             }
         }
+        #endregion Upload
 
         /// <summary>
         /// This operation will create a new
@@ -1051,22 +1075,33 @@ namespace Azure.Storage.Blobs
                     .ConfigureAwait(false);
             }
         }
-        #endregion Upload
-
-        // NOTE: TransformContent is no longer called by the new implementation
-        // of parallel upload.  Leaving the virtual stub in for now to avoid
-        // any confusion.  Will need to be added back for encryption work per
-        // #7127.
 
         /// <summary>
         /// Performs a transform on the data for uploads. It is a no-op by default.
         /// </summary>
         /// <param name="content">Content to transform.</param>
-        /// <param name="metadata">Content metadata to transform.</param>
+        /// <param name="cancellationToken">
+        /// Optional <see cref="CancellationToken"/> to propagate
+        /// notifications that the operation should be cancelled.
+        /// </param>
         /// <returns>Transformed content stream and metadata.</returns>
-        internal virtual (Stream, Metadata) TransformContent(Stream content, Metadata metadata)
+        protected virtual BlobContent TransformUploadContent(BlobContent content, CancellationToken cancellationToken = default)
         {
-            return (content, metadata); // no-op
+            return content; // no-op
+        }
+
+        /// <summary>
+        /// Performs an asynchronous transform on the data for uploads. It is a no-op by default.
+        /// </summary>
+        /// <param name="content">Content to transform.</param>
+        /// <param name="cancellationToken">
+        /// Optional <see cref="CancellationToken"/> to propagate
+        /// notifications that the operation should be cancelled.
+        /// </param>
+        /// <returns>Transformed content stream and metadata.</returns>
+        protected virtual Task<BlobContent> TransformUploadContentAsync(BlobContent content, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(content); // no-op
         }
     }
 }

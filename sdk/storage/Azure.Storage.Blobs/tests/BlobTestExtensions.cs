@@ -3,6 +3,7 @@
 
 using System;
 using Azure.Core;
+using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
 
@@ -24,72 +25,84 @@ namespace Azure.Storage
 
         public static AppendBlobClient WithCustomerProvidedKey(
             this AppendBlobClient blob,
-            CustomerProvidedKey customerProvidedKey) =>
-            new AppendBlobClient(
+            CustomerProvidedKey customerProvidedKey)
+        {
+            // this technically corrupts the field. But this is test-only code, we so we can get away with it.
+            blob.SourceOptions.CustomerProvidedKey = customerProvidedKey;
+            return new AppendBlobClient(
                 ToHttps(blob.Uri),
                 blob.Pipeline,
-                blob.Version,
-                blob.ClientDiagnostics,
-                customerProvidedKey,
-                null);
+                blob.AuthenticationPolicy,
+                blob.SourceOptions);
+        }
 
         //TODO remove ToHttps() after service fixes HTTPS bug.
         public static AppendBlobClient WithEncryptionScope(
             this AppendBlobClient blob,
-            string encryptionScope) =>
-            new AppendBlobClient(
+            string encryptionScope)
+        {
+            // this technically corrupts the field. But this is test-only code, we so we can get away with it.
+            blob.SourceOptions.EncryptionScope = encryptionScope;
+            return new AppendBlobClient(
                 ToHttps(blob.Uri),
                 blob.Pipeline,
-                blob.Version,
-                blob.ClientDiagnostics,
-                null,
-                encryptionScope);
+                blob.AuthenticationPolicy,
+                blob.SourceOptions);
+        }
 
         public static BlockBlobClient WithCustomerProvidedKey(
             this BlockBlobClient blob,
-            CustomerProvidedKey customerProvidedKey) =>
-            new BlockBlobClient(
+            CustomerProvidedKey customerProvidedKey)
+        {
+            // this technically corrupts the field. But this is test-only code, we so we can get away with it.
+            blob.SourceOptions.CustomerProvidedKey = customerProvidedKey;
+            return new BlockBlobClient(
                 ToHttps(blob.Uri),
                 blob.Pipeline,
-                blob.Version,
-                blob.ClientDiagnostics,
-                customerProvidedKey,
-                null);
+                blob.AuthenticationPolicy,
+                blob.SourceOptions);
+        }
 
         //TODO remove ToHttps() after service fixes HTTPS bug.
         public static BlockBlobClient WithEncryptionScope(
             this BlockBlobClient blob,
-            string encryptionScope) =>
-            new BlockBlobClient(
+            string encryptionScope)
+        {
+            // this technically corrupts the field. But this is test-only code, we so we can get away with it.
+            blob.SourceOptions.EncryptionScope = encryptionScope;
+            return new BlockBlobClient(
                 ToHttps(blob.Uri),
                 blob.Pipeline,
-                blob.Version,
-                blob.ClientDiagnostics,
-                null,
-                encryptionScope);
+                blob.AuthenticationPolicy,
+                blob.SourceOptions);
+        }
 
         public static PageBlobClient WithCustomerProvidedKey(
             this PageBlobClient blob,
-            CustomerProvidedKey customerProvidedKey) =>
-            new PageBlobClient(
+            CustomerProvidedKey customerProvidedKey)
+        {
+            // this technically corrupts the field. But this is test-only code, we so we can get away with it.
+            blob.SourceOptions.CustomerProvidedKey = customerProvidedKey;
+            return new PageBlobClient(
                 ToHttps(blob.Uri),
                 blob.Pipeline,
-                blob.Version,
-                blob.ClientDiagnostics,
-                customerProvidedKey,
-                null);
+                blob.AuthenticationPolicy,
+                blob.SourceOptions);
+        }
 
         //TODO remove ToHttps() after service fixes HTTPS bug.
         public static PageBlobClient WithEncryptionScope(
             this PageBlobClient blob,
-            string encryptionScope) =>
-            new PageBlobClient(
+            string encryptionScope)
+        {
+            // this technically corrupts the field. But this is test-only code, we so we can get away with it.
+            blob.SourceOptions.EncryptionScope = encryptionScope;
+            return new PageBlobClient(
                 ToHttps(blob.Uri),
                 blob.Pipeline,
-                blob.Version,
-                blob.ClientDiagnostics,
-                null,
-                encryptionScope);
+                blob.AuthenticationPolicy,
+                blob.SourceOptions);
+        }
 
         /// <summary>
         /// Convert a base RequestConditions to BlobRequestConditions.

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Azure.Core;
 using Azure.Core.Pipeline;
 using Azure.Core.Testing;
+using Azure.Storage.Common.Tests.Shared;
 using Azure.Storage.Queues.Models;
 using Azure.Storage.Sas;
 using Azure.Storage.Test;
@@ -123,6 +124,23 @@ namespace Azure.Storage.Queues.Tests
                     new Uri(config.QueueServiceEndpoint),
                     GetOAuthCredential(config),
                     GetOptions()));
+
+        private static Security.KeyVault.Keys.KeyClient GetKeyClient(KeyVaultConfiguration config)
+            => new Security.KeyVault.Keys.KeyClient(
+                new Uri(config.VaultEndpoint),
+                GetKeyClientTokenCredential(config));
+
+        private static TokenCredential GetKeyClientTokenCredential(KeyVaultConfiguration config)
+            => new Identity.ClientSecretCredential(
+                config.ActiveDirectoryTenantId,
+                config.ActiveDirectoryApplicationId,
+                config.ActiveDirectoryApplicationSecret);
+
+        public Security.KeyVault.Keys.KeyClient GetKeyClient_TargetKeyClient()
+            => GetKeyClient(TestConfigurations.DefaultTargetKeyVault);
+
+        public TokenCredential GetTokenCredential_TargetKeyClient()
+            => GetKeyClientTokenCredential(TestConfigurations.DefaultTargetKeyVault);
 
         public async Task<DisposingQueue> GetTestQueueAsync(QueueServiceClient service = default, IDictionary<string, string> metadata = default)
         {

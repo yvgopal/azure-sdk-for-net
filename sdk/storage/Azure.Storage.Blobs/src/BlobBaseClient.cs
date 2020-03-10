@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -43,6 +44,26 @@ namespace Azure.Storage.Blobs.Specialized
         /// every request.
         /// </summary>
         internal virtual HttpPipeline Pipeline => _pipeline;
+
+        /// <summary>
+        /// The <see cref="BlobClientOptions"/> used to make this client's <see cref="Pipeline"/>.
+        /// </summary>
+        private readonly BlobClientOptions _sourceOptions;
+
+        /// <summary>
+        /// A deep copy of the <see cref="BlobClientOptions"/> used to make this client. Every call to this property
+        /// will return a new deep copy of the original, free to safely mutate.
+        /// </summary>
+        internal virtual BlobClientOptions SourceOptions => _sourceOptions;
+
+        /// <summary>
+        /// The authentication policy for our pipeline.  We cache it here in
+        /// case we need to construct a pipeline for authenticating batch
+        /// operations.
+        /// </summary>
+        private readonly HttpPipelinePolicy _authenticationPolicy;
+
+        internal virtual HttpPipelinePolicy AuthenticationPolicy => _authenticationPolicy;
 
         /// <summary>
         /// The version of the service to use when sending requests.
@@ -191,23 +212,43 @@ namespace Azure.Storage.Blobs.Specialized
         /// every request.
         /// </param>
         public BlobBaseClient(string connectionString, string blobContainerName, string blobName, BlobClientOptions options)
+            : this(
+                StorageConnectionString.Parse(connectionString),
+                blobContainerName,
+                blobName,
+                options)
         {
-            options ??= new BlobClientOptions();
-            var conn = StorageConnectionString.Parse(connectionString);
-            var builder =
-                new BlobUriBuilder(conn.BlobEndpoint)
+        }
+
+        /// <summary>
+        /// Private constructor allowing <see cref="BlobBaseClient(string, string, string, BlobClientOptions)"/> to parse
+        /// the connection string once and efficiently call into
+        /// <see cref="BlobBaseClient(Uri, HttpPipelinePolicy, BlobClientOptions)"/>.
+        /// </summary>
+        /// <param name="connectionString">
+        /// Parsed connection string.
+        /// </param>
+        /// <param name="blobContainerName">
+        /// The name of the container containing this blob.
+        /// </param>
+        /// <param name="blobName">
+        /// The name of this blob.
+        /// </param>
+        /// <param name="options">
+        /// Optional client options that define the transport pipeline
+        /// policies for authentication, retries, etc., that are applied to
+        /// every request.
+        /// </param>
+        private BlobBaseClient(StorageConnectionString connectionString, string blobContainerName, string blobName, BlobClientOptions options)
+            : this(
+                new BlobUriBuilder(connectionString.BlobEndpoint)
                 {
                     BlobContainerName = blobContainerName,
                     BlobName = blobName
-                };
-            _uri = builder.ToUri();
-            _pipeline = options.Build(conn.Credentials);
-            _version = options.Version;
-            _clientDiagnostics = new ClientDiagnostics(options);
-            _customerProvidedKey = options.CustomerProvidedKey;
-            _encryptionScope = options.EncryptionScope;
-            BlobErrors.VerifyHttpsCustomerProvidedKey(_uri, _customerProvidedKey);
-            BlobErrors.VerifyCpkAndEncryptionScopeNotBothSet(_customerProvidedKey, _encryptionScope);
+                }.ToUri(),
+                StorageClientOptions.GetAuthenticationPolicy(connectionString.Credentials),
+                options)
+        {
         }
 
         /// <summary>
@@ -295,17 +336,17 @@ namespace Azure.Storage.Blobs.Specialized
         /// policies for authentication, retries, etc., that are applied to
         /// every request.
         /// </param>
+        /// <remarks>
+        /// This constructor is intended as the forwarding spot for other
+        /// constructors on this class.
+        /// </remarks>
         internal BlobBaseClient(Uri blobUri, HttpPipelinePolicy authentication, BlobClientOptions options)
+            : this(
+                blobUri,
+                (options ?? new BlobClientOptions()).Build(authentication),
+                authentication,
+                options)
         {
-            options ??= new BlobClientOptions();
-            _uri = blobUri;
-            _pipeline = options.Build(authentication);
-            _version = options.Version;
-            _clientDiagnostics = new ClientDiagnostics(options);
-            _customerProvidedKey = options.CustomerProvidedKey;
-            _encryptionScope = options.EncryptionScope;
-            BlobErrors.VerifyHttpsCustomerProvidedKey(_uri, _customerProvidedKey);
-            BlobErrors.VerifyCpkAndEncryptionScopeNotBothSet(_customerProvidedKey, _encryptionScope);
         }
 
         /// <summary>
@@ -321,26 +362,34 @@ namespace Azure.Storage.Blobs.Specialized
         /// <param name="pipeline">
         /// The transport pipeline used to send every request.
         /// </param>
-        /// <param name="version">
-        /// The version of the service to use when sending requests.
+        /// <param name="authentication">
+        /// The authentication policy that was used in the given pipeline, for tracking purposes.
         /// </param>
-        /// <param name="clientDiagnostics">Client diagnostics.</param>
-        /// <param name="customerProvidedKey">Customer provided key.</param>
-        /// <param name="encryptionScope">Encryption scope.</param>
+        /// <param name="options">
+        /// The options used to construct the given pipeline, for tracking purposes.
+        /// </param>
+        /// <remarks>
+        /// This constructor is intended for existing clients to pass on their
+        /// pipeline when creating new clients.
+        /// </remarks>
         internal BlobBaseClient(
             Uri blobUri,
             HttpPipeline pipeline,
-            BlobClientOptions.ServiceVersion version,
-            ClientDiagnostics clientDiagnostics,
-            CustomerProvidedKey? customerProvidedKey,
-            string encryptionScope)
+            HttpPipelinePolicy authentication,
+            BlobClientOptions options)
         {
             _uri = blobUri;
+            _authenticationPolicy = authentication;
+
+            // save the actual options passed in before any modifications made for construction
+            _sourceOptions = options;
+            options ??= new BlobClientOptions();
+
             _pipeline = pipeline;
-            _version = version;
-            _clientDiagnostics = clientDiagnostics;
-            _customerProvidedKey = customerProvidedKey;
-            _encryptionScope = encryptionScope;
+            _version = options.Version;
+            _clientDiagnostics = new ClientDiagnostics(options);
+            _customerProvidedKey = options.CustomerProvidedKey;
+            _encryptionScope = options.EncryptionScope;
             BlobErrors.VerifyHttpsCustomerProvidedKey(_uri, _customerProvidedKey);
             BlobErrors.VerifyCpkAndEncryptionScopeNotBothSet(_customerProvidedKey, _encryptionScope);
         }
@@ -371,7 +420,7 @@ namespace Azure.Storage.Blobs.Specialized
         protected virtual BlobBaseClient WithSnapshotCore(string snapshot)
         {
             var builder = new BlobUriBuilder(Uri) { Snapshot = snapshot };
-            return new BlobBaseClient(builder.ToUri(), Pipeline, Version, ClientDiagnostics, CustomerProvidedKey, EncryptionScope);
+            return new BlobBaseClient(builder.ToUri(), Pipeline, AuthenticationPolicy, SourceOptions);
         }
 
         /// <summary>
@@ -793,21 +842,25 @@ namespace Azure.Storage.Blobs.Specialized
             bool async = true,
             CancellationToken cancellationToken = default)
         {
-            var pageRange = new HttpRange(
+            var requestedRangeWithRetryLogic = new HttpRange(
                 range.Offset + startOffset,
                 range.Length.HasValue ?
                     range.Length.Value - startOffset :
                     (long?)null);
 
-            Pipeline.LogTrace($"Download {Uri} with range: {pageRange}");
+            Pipeline.LogTrace($"Download {Uri} with range: {requestedRangeWithRetryLogic}");
 
+            /* Last second adjustment for clientside encryption behavior injection
+             * Must save old range to re-adjust stream for user
+             * Default implementation is a no-op */
+            var transformedRange = TransformDownloadSliceRange(range);
             (Response<FlattenedDownloadProperties> response, Stream stream) =
                 await BlobRestClient.Blob.DownloadAsync(
                     ClientDiagnostics,
                     Pipeline,
                     Uri,
                     version: Version.ToVersionString(),
-                    range: pageRange.ToString(),
+                    range: transformedRange.ToString(),
                     leaseId: conditions?.LeaseId,
                     rangeGetContentHash: rangeGetContentHash ? (bool?)true : null,
                     encryptionKey: CustomerProvidedKey?.EncryptionKey,
@@ -823,7 +876,24 @@ namespace Azure.Storage.Blobs.Specialized
                     .ConfigureAwait(false);
 
             // Watch out for exploding Responses
-            long length = response.IsUnavailable() ? 0 : response.Value.ContentLength;
+            long length = 0;
+            if (!response.IsUnavailable())
+            {
+                length = response.Value.ContentLength;
+
+                // apply transformations to the content
+                var blobContent = new BlobContent()
+                {
+                    Content = stream,
+                    Metadata = response.Value.Metadata
+                };
+                blobContent = async
+                    ? await TransformDownloadSliceContentAsync(blobContent, requestedRangeWithRetryLogic, response.Value.ContentRange, cancellationToken).ConfigureAwait(false)
+                    : TransformDownloadSliceContent(blobContent, requestedRangeWithRetryLogic, response.Value.ContentRange, cancellationToken);
+                stream = blobContent.Content;
+                response.Value.Content = blobContent.Content;
+                response.Value.Metadata = blobContent.Metadata;
+            }
             Pipeline.LogTrace($"Response: {response.GetRawResponse().Status}, ContentLength: {length}");
 
             return (response, stream);
@@ -1257,9 +1327,9 @@ namespace Azure.Storage.Blobs.Specialized
             bool async = true,
             CancellationToken cancellationToken = default)
         {
-            var client = new BlobBaseClient(Uri, Pipeline, Version, ClientDiagnostics, CustomerProvidedKey, EncryptionScope);
+            //var client = new BlobBaseClient(Uri, Pipeline, AuthenticationPolicy, SourceOptions);
 
-            PartitionedDownloader downloader = new PartitionedDownloader(client, transferOptions);
+            PartitionedDownloader downloader = new PartitionedDownloader(this, transferOptions);
 
             if (async)
             {
@@ -3006,6 +3076,58 @@ namespace Azure.Storage.Blobs.Specialized
             }
         }
         #endregion SetAccessTier
+
+        /// <summary>
+        /// Transforms the content of an individual REST download, not an overall multipart download.
+        /// </summary>
+        /// <param name="content">Content of this download slice.</param>
+        /// <param name="originalRange">Orignially requested range of the slice.</param>
+        /// <param name="receivedContentRange">Content range that came back form the service.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>Transformed content.</returns>
+        protected virtual BlobContent TransformDownloadSliceContent(
+            BlobContent content,
+            HttpRange originalRange,
+            string receivedContentRange,
+            CancellationToken cancellationToken = default)
+        {
+            return content; // no-op
+        }
+
+        /// <summary>
+        /// Transforms the content of an individual REST download asyncronously, not an overall multipart download.
+        /// </summary>
+        /// <param name="content">Content of this download slice.</param>
+        /// <param name="originalRange">Orignially requested range of the slice.</param>
+        /// <param name="receivedContentRange">Content range that came back form the service.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>Transformed content.</returns>
+        protected virtual Task<BlobContent> TransformDownloadSliceContentAsync(
+            BlobContent content,
+            HttpRange originalRange,
+            string receivedContentRange,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(content); // no-op
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="range"></param>
+        /// <returns></returns>
+        protected virtual HttpRange TransformDownloadSliceRange(HttpRange range)
+        {
+            return range; // no-op
+        }
+
+        /// <summary>
+        /// Accessor for separately packaged blob clients to access details about a container client's pipeline.
+        /// </summary>
+        /// <param name="containerClient">Client to get details of.</param>
+        /// <returns>The details.</returns>
+        protected static (BlobClientOptions options, HttpPipelinePolicy authPolicy) GetContainerPipelineInfo(BlobContainerClient containerClient)
+            => (containerClient.SourceOptions, containerClient.AuthenticationPolicy);
     }
 
     /// <summary>
@@ -3030,9 +3152,7 @@ namespace Azure.Storage.Blobs.Specialized
             new BlobBaseClient(
                 client.Uri.AppendToPath(blobName),
                 client.Pipeline,
-                client.Version,
-                client.ClientDiagnostics,
-                client.CustomerProvidedKey,
-                client.EncryptionScope);
+                client.AuthenticationPolicy,
+                client.SourceOptions);
     }
 }

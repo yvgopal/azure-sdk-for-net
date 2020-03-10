@@ -43,6 +43,17 @@ namespace Azure.Storage.Blobs
         internal virtual HttpPipeline Pipeline => _pipeline;
 
         /// <summary>
+        /// The <see cref="BlobClientOptions"/> used to make this client's <see cref="Pipeline"/>.
+        /// </summary>
+        private readonly BlobClientOptions _sourceOptions;
+
+        /// <summary>
+        /// A deep copy of the <see cref="BlobClientOptions"/> used to make this client. Every call to this property
+        /// will return a new deep copy of the original, free to safely mutate.
+        /// </summary>
+        internal virtual BlobClientOptions SourceOptions => _sourceOptions;
+
+        /// <summary>
         /// The version of the service to use when sending requests.
         /// </summary>
         private readonly BlobClientOptions.ServiceVersion _version;
@@ -155,18 +166,31 @@ namespace Azure.Storage.Blobs
         /// every request.
         /// </param>
         public BlobServiceClient(string connectionString, BlobClientOptions options)
+            : this(
+                StorageConnectionString.Parse(connectionString),
+                options)
         {
-            var conn = StorageConnectionString.Parse(connectionString);
-            _uri = conn.BlobEndpoint;
-            options ??= new BlobClientOptions();
-            _authenticationPolicy = StorageClientOptions.GetAuthenticationPolicy(conn.Credentials);
-            _pipeline = options.Build(_authenticationPolicy);
-            _version = options.Version;
-            _clientDiagnostics = new ClientDiagnostics(options);
-            _customerProvidedKey = options.CustomerProvidedKey;
-            _encryptionScope = options.EncryptionScope;
-            BlobErrors.VerifyHttpsCustomerProvidedKey(_uri, _customerProvidedKey);
-            BlobErrors.VerifyCpkAndEncryptionScopeNotBothSet(_customerProvidedKey, _encryptionScope);
+        }
+
+        /// <summary>
+        /// Private constructor allowing <see cref="BlobServiceClient(string, BlobClientOptions)"/> to parse
+        /// the connection string once and efficiently call into
+        /// <see cref="BlobServiceClient(Uri, HttpPipelinePolicy, BlobClientOptions)"/>.
+        /// </summary>
+        /// <param name="connectionString">
+        /// Parsed connection string.
+        /// </param>
+        /// <param name="options">
+        /// Optional client options that define the transport pipeline
+        /// policies for authentication, retries, etc., that are applied to
+        /// every request.
+        /// </param>
+        private BlobServiceClient(StorageConnectionString connectionString, BlobClientOptions options)
+            : this(
+                new BlobUriBuilder(connectionString.BlobEndpoint).ToUri(),
+                StorageClientOptions.GetAuthenticationPolicy(connectionString.Credentials),
+                options)
+        {
         }
 
         /// <summary>
@@ -183,7 +207,7 @@ namespace Azure.Storage.Blobs
         /// every request.
         /// </param>
         public BlobServiceClient(Uri serviceUri, BlobClientOptions options = default)
-            : this(serviceUri, (HttpPipelinePolicy)null, options ?? new BlobClientOptions())
+            : this(serviceUri, (HttpPipelinePolicy)null, options)
         {
         }
 
@@ -204,7 +228,7 @@ namespace Azure.Storage.Blobs
         /// every request.
         /// </param>
         public BlobServiceClient(Uri serviceUri, StorageSharedKeyCredential credential, BlobClientOptions options = default)
-            : this(serviceUri, credential.AsPolicy(), options ?? new BlobClientOptions())
+            : this(serviceUri, credential.AsPolicy(), options)
         {
         }
 
@@ -225,7 +249,7 @@ namespace Azure.Storage.Blobs
         /// every request.
         /// </param>
         public BlobServiceClient(Uri serviceUri, TokenCredential credential, BlobClientOptions options = default)
-            : this(serviceUri, credential.AsPolicy(), options ?? new BlobClientOptions())
+            : this(serviceUri, credential.AsPolicy(), options)
         {
             Errors.VerifyHttpsTokenAuth(serviceUri);
         }
@@ -248,15 +272,11 @@ namespace Azure.Storage.Blobs
         /// </param>
         internal BlobServiceClient(Uri serviceUri, HttpPipelinePolicy authentication, BlobClientOptions options)
             : this(
-                  serviceUri,
-                  authentication,
-                  options?.Version ?? BlobClientOptions.LatestVersion,
-                  new ClientDiagnostics(options),
-                  options?.CustomerProvidedKey,
-                  options?.EncryptionScope,
-                  options.Build(authentication))
+                serviceUri,
+                authentication,
+                (options ?? new BlobClientOptions()).Build(authentication),
+                options)
         {
-
         }
 
         /// <summary>
@@ -270,34 +290,24 @@ namespace Azure.Storage.Blobs
         /// <param name="authentication">
         /// An optional authentication policy used to sign requests.
         /// </param>
-        /// <param name="version">
-        /// The version of the service to use when sending requests.
-        /// </param>
-        /// <param name="clientDiagnostics">
-        /// The <see cref="ClientDiagnostics"/> instance used to create
-        /// diagnostic scopes every request.
-        /// </param>
-        /// <param name="customerProvidedKey">Customer provided key.</param>
-        /// <param name="encryptionScope">Encryption scope.</param>
         /// <param name="pipeline">
         /// The transport pipeline used to send every request.
         /// </param>
-        internal BlobServiceClient(
-            Uri serviceUri,
-            HttpPipelinePolicy authentication,
-            BlobClientOptions.ServiceVersion version,
-            ClientDiagnostics clientDiagnostics,
-            CustomerProvidedKey? customerProvidedKey,
-            string encryptionScope,
-            HttpPipeline pipeline)
+        /// <param name="options">Client options used to construct the given pipeline.</param>
+        internal BlobServiceClient(Uri serviceUri, HttpPipelinePolicy authentication, HttpPipeline pipeline, BlobClientOptions options)
         {
             _uri = serviceUri;
             _authenticationPolicy = authentication;
+
+            // save the actual options passed in before any modifications made for construction
+            _sourceOptions = options;
+            options ??= new BlobClientOptions();
+
             _pipeline = pipeline;
-            _version = version;
-            _clientDiagnostics = clientDiagnostics;
-            _customerProvidedKey = customerProvidedKey;
-            _encryptionScope = encryptionScope;
+            _version = options.Version;
+            _clientDiagnostics = new ClientDiagnostics(options);
+            _customerProvidedKey = options.CustomerProvidedKey;
+            _encryptionScope = options.EncryptionScope;
             BlobErrors.VerifyCpkAndEncryptionScopeNotBothSet(_customerProvidedKey, _encryptionScope);
             BlobErrors.VerifyHttpsCustomerProvidedKey(_uri, _customerProvidedKey);
         }
@@ -331,7 +341,11 @@ namespace Azure.Storage.Blobs
             HttpPipelinePolicy authentication,
             HttpPipeline pipeline)
         {
-            return new BlobServiceClient(serviceUri, authentication, options.Version, new ClientDiagnostics(options), null, null, pipeline);
+            /* This method only exists for the DataLake client to have an internal container client. We don't have to
+             * worry about having a paper trail to the client, so we don't care that we pass the fake client options
+             * into this method.
+             */
+            return new BlobServiceClient(serviceUri, authentication, pipeline, options);
         }
         #endregion ctors
 
@@ -348,7 +362,7 @@ namespace Azure.Storage.Blobs
         /// A <see cref="BlobContainerClient"/> for the desired container.
         /// </returns>
         public virtual BlobContainerClient GetBlobContainerClient(string blobContainerName) =>
-            new BlobContainerClient(Uri.AppendToPath(blobContainerName), Pipeline, Version, ClientDiagnostics, CustomerProvidedKey, EncryptionScope);
+            new BlobContainerClient(Uri.AppendToPath(blobContainerName), Pipeline, AuthenticationPolicy, SourceOptions);
 
         /// <summary>
         /// Creates a shared access signature (SAS) token targeting the same account as this client, authenticating
