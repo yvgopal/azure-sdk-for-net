@@ -14,19 +14,21 @@ using Azure.Storage.ChangeFeed.Models;
 
 namespace Azure.Storage.ChangeFeed
 {
-    internal class ChangeFeed : ChangeFeedBase
+    internal class ChangeFeed
     {
         /// <summary>
         /// BlobContainerClient for making List Blob requests and creating Segments.
         /// </summary>
         private readonly BlobContainerClient _containerClient;
-        private readonly List<Segment> _segments;
+        private Queue<string> _years;
+        private Queue<string> _segments;
+        private Segment _currentSegment;
         private DateTimeOffset _segmentCursor;
         //TODO need to make mutable for live streaming events
         private DateTimeOffset _lastConsumable;
         private DateTimeOffset? _startTime;
         private DateTimeOffset? _endTime;
-        private string _segmentsPathsContinutationToken;
+        //private string _segmentsPathsContinutationToken;
 
         /// <summary>
         /// If this ChangeFeed has been initalized.
@@ -40,7 +42,8 @@ namespace Azure.Storage.ChangeFeed
             DateTimeOffset? endTime = default)
         {
             _containerClient = blobServiceClient.GetBlobContainerClient(Constants.ChangeFeed.ChangeFeedContainerName);
-            _segments = new List<Segment>();
+            _years = new Queue<string>();
+            _segments = new Queue<string>();
             _isInitalized = false;
             _startTime = RoundHourDown(startTime);
             _endTime = RoundHourUp(endTime);
@@ -90,54 +93,55 @@ namespace Azure.Storage.ChangeFeed
 
             _lastConsumable = jsonMetaSegment.RootElement.GetProperty("lastConsumable").GetDateTimeOffset();
 
-            // Get Segments
-            //if (async)
-            //{
-            //    await foreach (BlobHierarchyItem blobHierarchyItem in _containerClient.GetBlobsByHierarchyAsync(
-            //        prefix: Constants.ChangeFeed.SegmentPrefix).ConfigureAwait(false))
-            //    {
-            //        if (blobHierarchyItem.IsPrefix
-            //            || blobHierarchyItem.Blob.Name.Contains(Constants.ChangeFeed.InitalizationManifestPath))
-            //            continue;
-
-            //        Segment segment = new Segment(_containerClient, blobHierarchyItem.Blob.Name);
-            //        _segments.Add(segment);
-            //    }
-            //}
-            //else
-            //{
-            //    foreach (BlobHierarchyItem blobHierarchyItem in _containerClient.GetBlobsByHierarchy(
-            //        prefix: Constants.ChangeFeed.SegmentPrefix))
-            //    {
-            //        if (blobHierarchyItem.IsPrefix
-            //            || blobHierarchyItem.Blob.Name.Contains(Constants.ChangeFeed.InitalizationManifestPath))
-            //            continue;
-
-            //        Segment segment = new Segment(_containerClient, blobHierarchyItem.Blob.Name);
-            //        _segments.Add(segment);
-            //    }
-            //}
-
-            // Get ~first month of segments
-
-            List<string> firstSegmentPaths;
-
+            // Get year paths
             if (async)
             {
-                firstSegmentPaths = await GetFirstSegments(async: true).ConfigureAwait(false);
+                _years = await GetYearPaths(async: true).ConfigureAwait(false);
             }
             else
             {
-                firstSegmentPaths = GetFirstSegments(async: false).EnsureCompleted();
+                _years = GetYearPaths(async: false).EnsureCompleted();
             }
 
-            foreach (string segmentPath in firstSegmentPaths)
+            // Dequeue any years that occur before start time
+            if (_startTime.HasValue)
             {
-                Segment segment = new Segment(_containerClient, segmentPath);
-                _segments.Add(segment);
+                while (_years.Count > 0
+                    && _years.Peek().ToDateTimeOffset() < _startTime)
+                {
+                    _years.Dequeue();
+                }
             }
 
-            _segmentCursor = _segments[0].DateTime;
+            if (_years.Count == 0)
+            {
+                return;
+            }
+
+            string firstYearPath = _years.Dequeue();
+
+            // Get Segments for first year
+            if (async)
+            {
+                _segments = await GetSegmentsInYear(
+                    async: true,
+                    yearPath: firstYearPath,
+                    startTime: _startTime,
+                    endTime: _endTime)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                _segments = GetSegmentsInYear(
+                    async: false,
+                    yearPath: firstYearPath,
+                    startTime: _startTime,
+                    endTime: _endTime)
+                    .EnsureCompleted();
+            }
+
+            _currentSegment = new Segment(_containerClient, _segments.Dequeue());
+            _segmentCursor = _currentSegment.DateTime;
             _isInitalized = true;
         }
 
@@ -161,45 +165,70 @@ namespace Azure.Storage.ChangeFeed
 
             if (!HasNext())
             {
-                return null;
+                return new BlobChangeFeedEventPage();
             }
 
             // Get next page
             Page<BlobChangeFeedEvent> page;
 
-            Segment currentSegment = _segments[0];
-
             //TODO what should we return here?  Also do we really need to check this on every page?
-            if (currentSegment.DateTime > _endTime)
+            if (_currentSegment.DateTime > _endTime)
             {
-                return null;
+                return new BlobChangeFeedEventPage();
             }
 
             //TODO what should we return here?  Also do we really need to check this on every page?
-            if (currentSegment.DateTime > _lastConsumable)
+            if (_currentSegment.DateTime > _lastConsumable)
             {
                 return new BlobChangeFeedEventPage();
             }
 
             if (async)
             {
-                page = await currentSegment.GetPage(async: true, pageSize).ConfigureAwait(false);
+                page = await _currentSegment.GetPage(async: true, pageSize).ConfigureAwait(false);
             }
             else
             {
-                page = currentSegment.GetPage(async: false, pageSize).EnsureCompleted();
+                page = _currentSegment.GetPage(async: false, pageSize).EnsureCompleted();
             }
 
             // If the current segment is completed, remove it
-            if (!currentSegment.HasNext())
+            if (!_currentSegment.HasNext() && _segments.Count > 0)
             {
-                _segments.RemoveAt(0);
+                _currentSegment = new Segment(_containerClient, _segments.Dequeue());
+                _segmentCursor = _currentSegment.DateTime;
             }
 
             // If _segments is empty, refill it
-            if (_segments.Count == 0)
+            else if (_segments.Count == 0 && _years.Count > 0)
             {
-                _
+                string yearPath = _years.Dequeue();
+
+                // Get Segments for first year
+                if (async)
+                {
+                    _segments = await GetSegmentsInYear(
+                        async: true,
+                        yearPath: yearPath,
+                        startTime: _startTime,
+                        endTime: _endTime)
+                        .ConfigureAwait(false);
+                }
+                else
+                {
+                    _segments = GetSegmentsInYear(
+                        async: false,
+                        yearPath: yearPath,
+                        startTime: _startTime,
+                        endTime: _endTime)
+                        .EnsureCompleted();
+                }
+
+                if (_segments.Count > 0)
+                {
+                    _currentSegment = new Segment(_containerClient, _segments.Dequeue());
+                    _segmentCursor = _currentSegment.DateTime;
+                }
             }
 
             return page;
@@ -210,6 +239,10 @@ namespace Azure.Storage.ChangeFeed
             if (!_isInitalized)
             {
                 return true;
+            }
+            if (_segments.Count == 0 && _years.Count == 0  && !_currentSegment.HasNext())
+            {
+                return false;
             }
             if (_endTime < LastConsumable())
             {
@@ -227,155 +260,80 @@ namespace Azure.Storage.ChangeFeed
             return _lastConsumable;
         }
 
-        //TODO what if we are live streaming and LastConsumable is advancing?
-        private async Task<List<string>> GetFirstSegments(bool async)
-        {
-            // Determine Change Feed start time.
-            string firstSegmentPath;
-
-            if (async)
-            {
-                firstSegmentPath = await GetFirstSegmentPath(async: true).ConfigureAwait(false);
-            }
-            else
-            {
-                firstSegmentPath = GetFirstSegmentPath(async: false).EnsureCompleted();
-            }
-
-            DateTimeOffset changeFeedStartTime = SegmentPathToDateTimeOffset(firstSegmentPath);
-            DateTimeOffset startTime = changeFeedStartTime;
-
-            if (_startTime.HasValue && changeFeedStartTime < _startTime)
-            {
-                startTime = _startTime.Value;
-            }
-
-            List<string> firstMonthOfSegments;
-
-            if (async)
-            {
-                firstMonthOfSegments = await GetFirstMonthOfSegmentPaths(
-                    async: true,
-                    startTime).ConfigureAwait(false);
-            }
-            else
-            {
-                firstMonthOfSegments = GetFirstMonthOfSegmentPaths(
-                    async: false,
-                    startTime)
-                    .EnsureCompleted();
-            }
-
-            return firstMonthOfSegments;
-        }
-
-        /// <summary>
-        /// Gets the first calendar month of segment paths that occured after startTime.
-        /// This will return a maximum of ~720 (24 hours * 30 days) segment paths.
-        /// </summary>
-        private async Task<Page<string>> GetFirstMonthOfSegmentPaths(
+        private async Task<Queue<string>> GetSegmentsInYear(
             bool async,
-            DateTimeOffset startTime,
-            int pageSize = 10)
+            string yearPath,
+            DateTimeOffset? startTime = default,
+            DateTimeOffset? endTime = default)
         {
-            // determine year
-            int year = startTime.Year;
+            List<string> list = new List<string>();
 
-            while (year <= _lastConsumable.Year)
-            {
-                string yearPath = BuildSegmentPath(year);
-                bool yearExists;
-                if (async)
-                {
-                    yearExists = await SegmentsExists(
-                        async: true,
-                        path: yearPath).ConfigureAwait(false);
-                }
-                else
-                {
-                    yearExists = SegmentsExists(
-                        async: false,
-                        path: yearPath).EnsureCompleted();
-                }
-
-                if (yearExists)
-                {
-                    break;
-                }
-                year++;
-            }
-
-            // determine month
-            int month = startTime.Month;
-
-            while (month <= _lastConsumable.Month)
-            {
-                string monthPath = BuildSegmentPath(year, month);
-                bool monthExists;
-                if (async)
-                {
-                    monthExists = await SegmentsExists(
-                        async: true,
-                        path: monthPath).ConfigureAwait(false);
-                }
-                else
-                {
-                    monthExists = SegmentsExists(
-                        async: false,
-                        path: monthPath).EnsureCompleted();
-                }
-
-                if (monthExists)
-                {
-                    break;
-                }
-                month++;
-            }
-
-            // Download first page of segment paths in the month
-            List<string> segmentPaths = new List<string>();
-            string continuationToken = null;
             if (async)
             {
-                IAsyncEnumerator<Page<BlobHierarchyItem>> asyncEnumerator= GetMonthSegmentPathAsyncEnumerator(
-                    year,
-                    month,
-                    pageSize);
+                await foreach (BlobHierarchyItem blobHierarchyItem in _containerClient.GetBlobsByHierarchyAsync(
+                    prefix: yearPath)
+                    .ConfigureAwait(false))
+                {
+                    if (blobHierarchyItem.IsPrefix)
+                        continue;
 
+                    DateTimeOffset segmentDateTime = blobHierarchyItem.Blob.Name.ToDateTimeOffset();
+                    if (startTime.HasValue && segmentDateTime < startTime
+                        || endTime.HasValue && segmentDateTime > endTime)
+                        continue;
+
+                    list.Add(blobHierarchyItem.Blob.Name);
+                }
             }
             else
             {
-                IEnumerator<Page<BlobHierarchyItem>> asyncEnumerator = GetMonthSegmentPathEnumerator(
-                    year,
-                    month,
-                    pageSize);
+                foreach (BlobHierarchyItem blobHierarchyItem in _containerClient.GetBlobsByHierarchy(
+                    prefix: yearPath))
+                {
+                    if (blobHierarchyItem.IsPrefix)
+                        continue;
+
+                    DateTimeOffset segmentDateTime = blobHierarchyItem.Blob.Name.ToDateTimeOffset();
+                    if (startTime.HasValue && segmentDateTime < startTime
+                        || endTime.HasValue && segmentDateTime > endTime)
+                        continue;
+
+                    list.Add(blobHierarchyItem.Blob.Name);
+                }
             }
 
-            return new SegmentPathPage(segmentPaths, continuationToken);
+            return new Queue<string>(list);
         }
 
-        private IAsyncEnumerator<Page<BlobHierarchyItem>> GetMonthSegmentPathAsyncEnumerator(
-            int year,
-            int month,
-            int pageSize)
+        private async Task<Queue<string>> GetYearPaths(bool async)
         {
-            string path = $"{Constants.ChangeFeed.SegmentPrefix}{year}/{month}";
-            return _containerClient.GetBlobsByHierarchyAsync(
-                    prefix: path)
-                .AsPages(pageSizeHint: 10)
-                .GetAsyncEnumerator();
-        }
+            List<string> list = new List<string>();
 
-        private IEnumerator<Page<BlobHierarchyItem>> GetMonthSegmentPathEnumerator(
-            int year,
-            int month,
-            int pageSize)
-        {
-            string path = $"{Constants.ChangeFeed.SegmentPrefix}{year}/{month}";
-            return _containerClient.GetBlobsByHierarchy(
-                    prefix: path)
-                .AsPages(pageSizeHint: 10)
-                .GetEnumerator();
+            if (async)
+            {
+                await foreach (BlobHierarchyItem blobHierarchyItem in _containerClient.GetBlobsByHierarchyAsync(
+                    prefix: Constants.ChangeFeed.SegmentPrefix,
+                    delimiter: "/").ConfigureAwait(false))
+                {
+                    if (blobHierarchyItem.Prefix.Contains(Constants.ChangeFeed.InitalizationSegment))
+                        continue;
+
+                    list.Add(blobHierarchyItem.Prefix);
+                }
+            }
+            else
+            {
+                foreach (BlobHierarchyItem blobHierarchyItem in _containerClient.GetBlobsByHierarchy(
+                prefix: Constants.ChangeFeed.SegmentPrefix,
+                delimiter: "/"))
+                {
+                    if (blobHierarchyItem.Prefix.Contains(Constants.ChangeFeed.InitalizationSegment))
+                        continue;
+
+                    list.Add(blobHierarchyItem.Prefix);
+                }
+            }
+            return new Queue<string>(list);
         }
 
 
@@ -405,52 +363,6 @@ namespace Azure.Storage.ChangeFeed
             }
 
             return stringBuilder.ToString();
-        }
-
-        private async Task<string> GetFirstSegmentPath(bool async)
-        {
-            BlobHierarchyItem firstSegmentItem;
-
-            if (async)
-            {
-                IAsyncEnumerable<Page<BlobHierarchyItem>> enumerable = _containerClient.GetBlobsByHierarchyAsync(
-                    prefix: Constants.ChangeFeed.SegmentPrefix).AsPages(pageSizeHint: 2);
-                IAsyncEnumerator<Page<BlobHierarchyItem>> enumerator = enumerable.GetAsyncEnumerator();
-                await enumerator.MoveNextAsync().ConfigureAwait(false);
-                firstSegmentItem = enumerator.Current.Values[1];
-            }
-            else
-            {
-                IEnumerable<Page<BlobHierarchyItem>> enumerable = _containerClient.GetBlobsByHierarchy(
-                    prefix: Constants.ChangeFeed.SegmentPrefix).AsPages(pageSizeHint: 2);
-                IEnumerator<Page<BlobHierarchyItem>> enumerator = enumerable.GetEnumerator();
-                enumerator.MoveNext();
-                firstSegmentItem = enumerator.Current.Values[1];
-            }
-
-            return firstSegmentItem.Blob.Name;
-        }
-
-        private async Task<bool> SegmentsExists(
-            bool async,
-            string path)
-        {
-            if (async)
-            {
-                IAsyncEnumerable<Page<BlobHierarchyItem>> enumerable = _containerClient.GetBlobsByHierarchyAsync(
-                    prefix: path).AsPages(pageSizeHint: 1);
-                IAsyncEnumerator<Page<BlobHierarchyItem>> enumerator = enumerable.GetAsyncEnumerator();
-                await enumerator.MoveNextAsync().ConfigureAwait(false);
-                return enumerator.Current.Values.Count > 0;
-            }
-            else
-            {
-                IEnumerable<Page<BlobHierarchyItem>> enumerable = _containerClient.GetBlobsByHierarchy(
-                    prefix: path).AsPages(pageSizeHint: 1);
-                IEnumerator<Page<BlobHierarchyItem>> enumerator = enumerable.GetEnumerator();
-                enumerator.MoveNext();
-                return enumerator.Current.Values.Count > 0;
-            }
         }
 
         /// <summary>
