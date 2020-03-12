@@ -5,6 +5,7 @@ namespace Azure.Storage.Queues
         protected QueueClient() { }
         public QueueClient(string connectionString, string queueName) { }
         public QueueClient(string connectionString, string queueName, Azure.Storage.Queues.QueueClientOptions options) { }
+        protected internal QueueClient(System.Uri queueUri, Azure.Core.Pipeline.HttpPipelinePolicy authentication, Azure.Storage.Queues.QueueClientOptions options) { }
         public QueueClient(System.Uri queueUri, Azure.Core.TokenCredential credential, Azure.Storage.Queues.QueueClientOptions options = null) { }
         public QueueClient(System.Uri queueUri, Azure.Storage.Queues.QueueClientOptions options = null) { }
         public QueueClient(System.Uri queueUri, Azure.Storage.StorageSharedKeyCredential credential, Azure.Storage.Queues.QueueClientOptions options = null) { }
@@ -32,6 +33,7 @@ namespace Azure.Storage.Queues
         public virtual System.Threading.Tasks.Task<Azure.Response<System.Collections.Generic.IEnumerable<Azure.Storage.Queues.Models.QueueSignedIdentifier>>> GetAccessPolicyAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) { throw null; }
         public virtual Azure.Response<Azure.Storage.Queues.Models.QueueProperties> GetProperties(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) { throw null; }
         public virtual System.Threading.Tasks.Task<Azure.Response<Azure.Storage.Queues.Models.QueueProperties>> GetPropertiesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) { throw null; }
+        protected static (Azure.Storage.Queues.QueueClientOptions options, Azure.Core.Pipeline.HttpPipelinePolicy authPolicy) GetQueueServiceClientPipelineInfo(Azure.Storage.Queues.QueueServiceClient client) { throw null; }
         public virtual Azure.Response<Azure.Storage.Queues.Models.PeekedMessage[]> PeekMessages(int? maxMessages = default(int?), System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) { throw null; }
         public virtual System.Threading.Tasks.Task<Azure.Response<Azure.Storage.Queues.Models.PeekedMessage[]>> PeekMessagesAsync(int? maxMessages = default(int?), System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) { throw null; }
         public virtual Azure.Response<Azure.Storage.Queues.Models.QueueMessage[]> ReceiveMessages() { throw null; }

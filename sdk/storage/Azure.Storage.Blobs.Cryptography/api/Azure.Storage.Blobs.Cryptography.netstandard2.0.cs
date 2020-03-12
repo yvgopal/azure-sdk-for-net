@@ -13,4 +13,8 @@ namespace Azure.Storage.Blobs.Specialized
         protected override Azure.Storage.Blobs.Models.BlobContent TransformUploadContent(Azure.Storage.Blobs.Models.BlobContent content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) { throw null; }
         protected override System.Threading.Tasks.Task<Azure.Storage.Blobs.Models.BlobContent> TransformUploadContentAsync(Azure.Storage.Blobs.Models.BlobContent content, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) { throw null; }
     }
+    public static partial class SpecializedBlobExtensions
+    {
+        public static Azure.Storage.Blobs.Specialized.EncryptedBlobClient GetEncryptedBlobClient(this Azure.Storage.Blobs.BlobContainerClient containerClient, string blobName, Azure.Storage.Common.Cryptography.ClientsideEncryptionOptions encryptionOptions) { throw null; }
+    }
 }

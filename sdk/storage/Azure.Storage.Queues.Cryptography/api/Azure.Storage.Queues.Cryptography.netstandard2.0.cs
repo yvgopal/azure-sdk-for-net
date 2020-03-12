@@ -10,4 +10,8 @@ namespace Azure.Storage.Queues.Specialized
         protected override string TransformMessageDownload(string downloadedMessage, System.Threading.CancellationToken cancellationToken) { throw null; }
         protected override string TransformMessageUpload(string messageToUpload, System.Threading.CancellationToken cancellationToken) { throw null; }
     }
+    public static partial class SpecializedQueueExtensions
+    {
+        public static Azure.Storage.Queues.Specialized.EncryptedQueueClient GetEncryptedQueueClient(this Azure.Storage.Queues.QueueServiceClient serviceClient, string queueName, Azure.Storage.Common.Cryptography.ClientsideEncryptionOptions encryptionOptions) { throw null; }
+    }
 }
