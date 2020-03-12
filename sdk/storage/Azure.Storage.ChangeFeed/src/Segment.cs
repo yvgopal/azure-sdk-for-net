@@ -95,7 +95,7 @@ namespace Azure.Storage.ChangeFeed
 
             if (!HasNext())
             {
-                return new BlobChangeFeedEventPage();
+                throw new InvalidOperationException("Segment doesn't have any more events");
             }
 
             int i = 0;

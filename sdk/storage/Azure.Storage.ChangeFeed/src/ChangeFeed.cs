@@ -165,7 +165,7 @@ namespace Azure.Storage.ChangeFeed
 
             if (!HasNext())
             {
-                return new BlobChangeFeedEventPage();
+                throw new InvalidOperationException("Change feed doesn't have any more events");
             }
 
             // Get next page

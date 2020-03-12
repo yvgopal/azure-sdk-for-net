@@ -36,8 +36,7 @@ namespace Azure.Storage.ChangeFeed
                 await foreach (BlobHierarchyItem blobHierarchyItem in _containerClient.GetBlobsByHierarchyAsync(
                     prefix: _shardPath).ConfigureAwait(false))
                 {
-                    if (blobHierarchyItem.IsPrefix
-                        || blobHierarchyItem.Blob.Name.Contains(Constants.ChangeFeed.InitalizationManifestPath))
+                    if (blobHierarchyItem.IsPrefix)
                         continue;
 
                     Chunk chunk = new Chunk(_containerClient, blobHierarchyItem.Blob.Name);
@@ -49,8 +48,7 @@ namespace Azure.Storage.ChangeFeed
                 foreach (BlobHierarchyItem blobHierarchyItem in _containerClient.GetBlobsByHierarchy(
                     prefix: _shardPath))
                 {
-                    if (blobHierarchyItem.IsPrefix
-                        || blobHierarchyItem.Blob.Name.Contains(Constants.ChangeFeed.InitalizationManifestPath))
+                    if (blobHierarchyItem.IsPrefix)
                         continue;
 
                     Chunk chunk = new Chunk(_containerClient, blobHierarchyItem.Blob.Name);
@@ -86,7 +84,7 @@ namespace Azure.Storage.ChangeFeed
 
             if (!HasNext())
             {
-                return null;
+                throw new InvalidOperationException("Shard doesn't have any more events");
             }
 
             Chunk currentChunk = _chunks[0];
