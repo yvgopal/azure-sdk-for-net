@@ -15,7 +15,7 @@ namespace Azure.Storage.ChangeFeed
     {
         private readonly BlobContainerClient _containerClient;
         private readonly string _shardPath;
-        private readonly List<Chunk> _chunks;
+        private readonly Queue<Chunk> _chunks;
         private bool _isInitialized;
 
         public Shard(
@@ -24,7 +24,7 @@ namespace Azure.Storage.ChangeFeed
         {
             _containerClient = containerClient;
             _shardPath = shardPath;
-            _chunks = new List<Chunk>();
+            _chunks = new Queue<Chunk>();
             _isInitialized = false;
         }
 
@@ -40,7 +40,7 @@ namespace Azure.Storage.ChangeFeed
                         continue;
 
                     Chunk chunk = new Chunk(_containerClient, blobHierarchyItem.Blob.Name);
-                    _chunks.Add(chunk);
+                    _chunks.Enqueue(chunk);
                 }
             }
             else
@@ -52,7 +52,7 @@ namespace Azure.Storage.ChangeFeed
                         continue;
 
                     Chunk chunk = new Chunk(_containerClient, blobHierarchyItem.Blob.Name);
-                    _chunks.Add(chunk);
+                    _chunks.Enqueue(chunk);
                 }
             }
             _isInitialized = true;
@@ -87,7 +87,7 @@ namespace Azure.Storage.ChangeFeed
                 throw new InvalidOperationException("Shard doesn't have any more events");
             }
 
-            Chunk currentChunk = _chunks[0];
+            Chunk currentChunk = _chunks.Peek();
             BlobChangeFeedEvent changeFeedEvent;
 
             if (async)
@@ -112,7 +112,7 @@ namespace Azure.Storage.ChangeFeed
 
             if (!currentChunkHasNext)
             {
-                _chunks.RemoveAt(0);
+                _chunks.Dequeue();
             }
             return changeFeedEvent;
         }
