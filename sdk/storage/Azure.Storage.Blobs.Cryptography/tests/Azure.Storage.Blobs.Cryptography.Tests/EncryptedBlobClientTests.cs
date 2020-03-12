@@ -59,16 +59,10 @@ namespace Azure.Storage.Blobs.Cryptography.Tests
         public EncryptedBlobClient GetEncryptedBlobClient(
             BlobContainerClient containerClient,
             string blobName,
-            StorageSharedKeyCredential credential,
-            ClientsideEncryptionOptions encryptionOptions,
-            BlobClientOptions options)
-        {
-            return InstrumentClient(new EncryptedBlobClient(
-                containerClient.Uri.AppendToPath(blobName),
-                credential,
-                encryptionOptions,
-                options));
-        }
+            ClientsideEncryptionOptions encryptionOptions)
+            => InstrumentClient(containerClient.GetEncryptedBlobClient(
+                blobName,
+                encryptionOptions));
 
         #endregion
 
@@ -88,13 +82,11 @@ namespace Azure.Storage.Blobs.Cryptography.Tests
                 var blob = GetEncryptedBlobClient(
                     disposable.Container,
                     blobName,
-                    new StorageSharedKeyCredential(TestConfigDefault.AccountName, TestConfigDefault.AccountKey),
                     new ClientsideEncryptionOptions()
                     {
                         KeyEncryptionKey = mockKey,
                         KeyResolver = mockKey
-                    },
-                    GetOptions());
+                    });
 
                 // upload with encryption
                 await blob.UploadAsync(new MemoryStream(data));
@@ -133,13 +125,11 @@ namespace Azure.Storage.Blobs.Cryptography.Tests
                 var blob = GetEncryptedBlobClient(
                     disposable.Container,
                     GetNewBlobName(),
-                    new StorageSharedKeyCredential(TestConfigDefault.AccountName, TestConfigDefault.AccountKey),
                     new ClientsideEncryptionOptions()
                     {
                         KeyEncryptionKey = mockKey,
                         KeyResolver = mockKey
-                    },
-                    GetOptions());
+                    });
 
                 // upload with encryption
                 await blob.UploadAsync(new MemoryStream(data));
@@ -177,13 +167,11 @@ namespace Azure.Storage.Blobs.Cryptography.Tests
                 var blob = GetEncryptedBlobClient(
                     disposable.Container,
                     GetNewBlobName(),
-                    new StorageSharedKeyCredential(TestConfigDefault.AccountName, TestConfigDefault.AccountKey),
                     new ClientsideEncryptionOptions()
                     {
                         KeyEncryptionKey = mockKey,
                         KeyResolver = mockKey
-                    },
-                    GetOptions());
+                    });
 
                 // upload with encryption
                 await blob.UploadAsync(new MemoryStream(data));
@@ -223,13 +211,11 @@ namespace Azure.Storage.Blobs.Cryptography.Tests
                 var track2Blob = GetEncryptedBlobClient(
                     disposable.Container,
                     GetNewBlobName(),
-                    new StorageSharedKeyCredential(TestConfigDefault.AccountName, TestConfigDefault.AccountKey),
                     new ClientsideEncryptionOptions()
                     {
                         KeyEncryptionKey = mockKey,
                         KeyResolver = mockKey
-                    },
-                    GetOptions());
+                    });
 
                 // upload with track 1
                 var creds = GetNewSharedKeyCredentials();
@@ -264,13 +250,11 @@ namespace Azure.Storage.Blobs.Cryptography.Tests
                 var track2Blob = GetEncryptedBlobClient(
                     disposable.Container,
                     GetNewBlobName(),
-                    new StorageSharedKeyCredential(TestConfigDefault.AccountName, TestConfigDefault.AccountKey),
                     new ClientsideEncryptionOptions()
                     {
                         KeyEncryptionKey = mockKey,
                         KeyResolver = mockKey
-                    },
-                    GetOptions());
+                    });
 
                 // upload with track 2
                 await track2Blob.UploadAsync(new MemoryStream(data));
@@ -301,15 +285,14 @@ namespace Azure.Storage.Blobs.Cryptography.Tests
             IKeyEncryptionKey key = await GetKeyvaultIKeyEncryptionKey();
             await using (var disposable = await GetTestContainerAsync())
             {
-                var blob = new EncryptedBlobClient(
-                    new Uri(Path.Combine(disposable.Container.Uri.ToString(), this.GetNewBlobName())),
-                    this.GetNewSharedKeyCredentials(),
+                var blob = GetEncryptedBlobClient(
+                    disposable.Container,
+                    GetNewBlobName(),
                     new ClientsideEncryptionOptions()
                     {
                         KeyEncryptionKey = key,
                         EncryptionKeyWrapAlgorithm = "RSA-OAEP-256"
-                    },
-                    GetOptions());
+                    });
 
                 await blob.UploadAsync(new MemoryStream(data));
 
@@ -349,13 +332,11 @@ namespace Azure.Storage.Blobs.Cryptography.Tests
                     var blob = GetEncryptedBlobClient(
                         disposable.Container,
                         GetNewBlobName(),
-                        new StorageSharedKeyCredential(TestConfigDefault.AccountName, TestConfigDefault.AccountKey),
                         new ClientsideEncryptionOptions()
                         {
                             KeyEncryptionKey = key,
                             KeyResolver = key
-                        },
-                        GetOptions());
+                        });
 
                     downloadTasks.Add(RoundTripDataHelper(blob, data));
                 }

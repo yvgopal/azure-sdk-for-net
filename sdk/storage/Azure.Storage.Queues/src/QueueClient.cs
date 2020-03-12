@@ -50,6 +50,25 @@ namespace Azure.Storage.Queues
         /// </summary>
         internal virtual HttpPipeline Pipeline => _pipeline;
 
+        ///// <summary>
+        ///// The <see cref="QueueClientOptions"/> used to make this client's <see cref="Pipeline"/>.
+        ///// </summary>
+        //private readonly QueueClientOptions _sourceOptions;
+
+        ///// <summary>
+        ///// The <see cref="QueueClientOptions"/> used to make this client.
+        ///// </summary>
+        //internal virtual QueueClientOptions SourceOptions => _sourceOptions;
+
+        ///// <summary>
+        ///// The authentication policy for our pipeline.  We cache it here in
+        ///// case we need to construct a pipeline for authenticating batch
+        ///// operations.
+        ///// </summary>
+        //private readonly HttpPipelinePolicy _authenticationPolicy;
+
+        //internal virtual HttpPipelinePolicy AuthenticationPolicy => _authenticationPolicy;
+
         /// <summary>
         /// The version of the service to use when sending requests.
         /// </summary>
@@ -261,7 +280,7 @@ namespace Azure.Storage.Queues
         /// policies for authentication, retries, etc., that are applied to
         /// every request.
         /// </param>
-        internal QueueClient(Uri queueUri, HttpPipelinePolicy authentication, QueueClientOptions options)
+        protected internal QueueClient(Uri queueUri, HttpPipelinePolicy authentication, QueueClientOptions options)
         {
             _uri = queueUri;
             _messagesUri = queueUri.AppendToPath(Constants.Queue.MessagesUri);
@@ -2105,5 +2124,17 @@ namespace Azure.Storage.Queues
             }
             return messages;
         }
+
+        /// <summary>
+        /// Accessor for extensions of <see cref="QueueClient"/> in other packages, granting
+        /// access to internal details on a<see cref="QueueServiceClient"/>'s pipeline.
+        /// This lets them create extensions methods on <see cref="QueueServiceClient"/> to
+        /// create the specialized <see cref="QueueClient"/> while maintaining client options,
+        /// much like the standard method <see cref="QueueServiceClient.GetQueueClient(string)"/>.
+        /// </summary>
+        /// <param name="client"></param>
+        /// <returns></returns>
+        protected static (QueueClientOptions options, HttpPipelinePolicy authPolicy) GetQueueServiceClientPipelineInfo(QueueServiceClient client)
+            => (client.SourceOptions, client.AuthenticationPolicy);
     }
 }

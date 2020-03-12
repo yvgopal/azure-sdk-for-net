@@ -38,6 +38,25 @@ namespace Azure.Storage.Queues
         internal virtual HttpPipeline Pipeline => _pipeline;
 
         /// <summary>
+        /// The <see cref="QueueClientOptions"/> used to make this client's <see cref="Pipeline"/>.
+        /// </summary>
+        private readonly QueueClientOptions _sourceOptions;
+
+        /// <summary>
+        /// The <see cref="QueueClientOptions"/> used to make this client.
+        /// </summary>
+        internal virtual QueueClientOptions SourceOptions => _sourceOptions;
+
+        /// <summary>
+        /// The authentication policy for our pipeline.  We cache it here in
+        /// case we need to construct a pipeline for authenticating batch
+        /// operations.
+        /// </summary>
+        private readonly HttpPipelinePolicy _authenticationPolicy;
+
+        internal virtual HttpPipelinePolicy AuthenticationPolicy => _authenticationPolicy;
+
+        /// <summary>
         /// The version of the service to use when sending requests.
         /// </summary>
         private readonly QueueClientOptions.ServiceVersion _version;
@@ -124,6 +143,8 @@ namespace Azure.Storage.Queues
         {
             var conn = StorageConnectionString.Parse(connectionString);
             _uri = conn.QueueEndpoint;
+            _sourceOptions = options;
+            _authenticationPolicy = StorageClientOptions.GetAuthenticationPolicy(conn.Credentials);
             options ??= new QueueClientOptions();
             _pipeline = options.Build(conn.Credentials);
             _version = options.Version;
@@ -210,6 +231,8 @@ namespace Azure.Storage.Queues
         internal QueueServiceClient(Uri serviceUri, HttpPipelinePolicy authentication, QueueClientOptions options)
         {
             _uri = serviceUri;
+            _sourceOptions = options;
+            _authenticationPolicy = authentication;
             options ??= new QueueClientOptions();
             _pipeline = options.Build(authentication);
             _version = options.Version;

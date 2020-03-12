@@ -200,45 +200,39 @@ namespace Azure.Storage.Blobs.Specialized
             KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
         }
 
-        //private EncryptedBlobClient(
-        //    Uri blobUri,
-        //    ClientsideEncryptionOptions encryptionOptions,
-        //    HttpPipelinePolicy authentication,
-        //    BlobClientOptions options)
-        //    : base(blobUri, authentication, options)
-        //{
-        //    KeyWrapper = encryptionOptions.KeyEncryptionKey;
-        //    KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
-        //}
+        private EncryptedBlobClient(
+            Uri blobUri,
+            ClientsideEncryptionOptions encryptionOptions,
+            HttpPipelinePolicy authentication,
+            BlobClientOptions options)
+            : base(blobUri, authentication, options)
+        {
+            KeyWrapper = encryptionOptions.KeyEncryptionKey;
+            KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
+        }
 
-        //TODO uncomment upon Azure.Core.ClientOptions "clone with modifications" support
-        ///// <summary>
-        ///// This behaves like a constructor. It has a conflicting signature with another public construtor, but
-        ///// has different behavior. The necessary extra behavior happens in this method and then invokes a private
-        ///// constructor with a now-unique signature.
-        ///// </summary>
-        ///// <param name="containerClient"></param>
-        ///// <param name="blobName"></param>
-        ///// <param name="encryptionOptions"></param>
-        ///// <returns></returns>
-        //internal static EncryptedBlobClient EncryptedBlobClientFromContainerClient(
-        //    BlobContainerClient containerClient,
-        //    string blobName,
-        //    ClientsideEncryptionOptions encryptionOptions)
-        //{
-        //    (var options, var authPolicy) = GetContainerPipelineInfo(containerClient);
+        /// <summary>
+        /// This behaves like a constructor. It has a conflicting signature with another public construtor, but
+        /// has different behavior. The necessary extra behavior happens in this method and then invokes a private
+        /// constructor with a now-unique signature.
+        /// </summary>
+        /// <param name="containerClient"></param>
+        /// <param name="blobName"></param>
+        /// <param name="encryptionOptions"></param>
+        /// <returns></returns>
+        internal static EncryptedBlobClient EncryptedBlobClientFromContainerClient(
+            BlobContainerClient containerClient,
+            string blobName,
+            ClientsideEncryptionOptions encryptionOptions)
+        {
+            (BlobClientOptions options, HttpPipelinePolicy authPolicy) = GetContainerPipelineInfo(containerClient);
 
-        //    var editedOptions = new BlobClientOptions(options);
-        //    editedOptions.AddPolicy(
-        //        new ClientSideDecryptionPolicy(encryptionOptions.KeyResolver, encryptionOptions.KeyEncryptionKey),
-        //        HttpPipelinePosition.PerCall);
-
-        //    return new EncryptedBlobClient(
-        //        containerClient.Uri.AppendToPath(blobName),
-        //        encryptionOptions,
-        //        authPolicy,
-        //        editedOptions);
-        //}
+            return new EncryptedBlobClient(
+                containerClient.Uri.AppendToPath(blobName),
+                encryptionOptions,
+                authPolicy,
+                options);
+        }
         #endregion ctors
 
         #region Transform Upload
@@ -472,40 +466,32 @@ namespace Azure.Storage.Blobs.Specialized
     }
 
     //TODO uncomment upon Azure.Core.ClientOptions "clone with modifications" support
-    //    /// <summary>
-    //    /// Add easy to discover methods to <see cref="BlobContainerClient"/> for
-    //    /// creating <see cref="EncryptedBlobClient"/> instances.
-    //    /// </summary>
-    //#pragma warning disable SA1402 // File may only contain a single type
-    //    public static partial class SpecializedBlobExtensions
-    //#pragma warning restore SA1402 // File may only contain a single type
-    //    {
-    //        /// <summary>
-    //        /// Create a new <see cref="EncryptedBlobClient"/> object by
-    //        /// concatenating <paramref name="blobName"/> to
-    //        /// the end of the <paramref name="containerClient"/>'s
-    //        /// <see cref="BlobContainerClient.Uri"/>.
-    //        /// </summary>
-    //        /// <param name="containerClient">The <see cref="BlobContainerClient"/>.</param>
-    //        /// <param name="blobName">The name of the encrypted block blob.</param>
-    //        /// <param name="encryptionOptions">
-    //        /// Clientside encryption options to provide encryption and/or
-    //        /// decryption implementations to the client.
-    //        /// every request.
-    //        /// </param>
-    //        /// <returns>A new <see cref="EncryptedBlobClient"/> instance.</returns>
-    //        public static EncryptedBlobClient GetEncryptedBlobClient(
-    //            this BlobContainerClient containerClient,
-    //            string blobName,
-    //            ClientsideEncryptionOptions encryptionOptions)
-    //            /*
-    //             * Extension methods have to be in their own static class, but the logic for this method needs a protected
-    //             * static method in BlobBaseClient. So this extension method just passes the arguments on to a place with
-    //             * access to that method.
-    //             */
-    //            => EncryptedBlobClient.EncryptedBlobClientFromContainerClient(
-    //                containerClient,
-    //                blobName,
-    //                encryptionOptions);
-    //    }
+    /// <summary>
+    /// Add easy to discover methods to <see cref="BlobContainerClient"/> for
+    /// creating <see cref="EncryptedBlobClient"/> instances.
+    /// </summary>
+#pragma warning disable SA1402 // File may only contain a single type
+    public static partial class SpecializedBlobExtensions
+#pragma warning restore SA1402 // File may only contain a single type
+    {
+        /// <summary>
+        /// Create a new <see cref="EncryptedBlobClient"/> object by
+        /// concatenating <paramref name="blobName"/> to
+        /// the end of the <paramref name="containerClient"/>'s
+        /// <see cref="BlobContainerClient.Uri"/>.
+        /// </summary>
+        /// <param name="containerClient">The <see cref="BlobContainerClient"/>.</param>
+        /// <param name="blobName">The name of the encrypted block blob.</param>
+        /// <param name="encryptionOptions">
+        /// Clientside encryption options to provide encryption and/or
+        /// decryption implementations to the client.
+        /// every request.
+        /// </param>
+        /// <returns>A new <see cref="EncryptedBlobClient"/> instance.</returns>
+        public static EncryptedBlobClient GetEncryptedBlobClient(
+            this BlobContainerClient containerClient,
+            string blobName,
+            ClientsideEncryptionOptions encryptionOptions)
+            => EncryptedBlobClient.EncryptedBlobClientFromContainerClient(containerClient, blobName, encryptionOptions);
+    }
 }

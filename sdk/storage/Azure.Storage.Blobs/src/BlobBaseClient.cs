@@ -3118,6 +3118,18 @@ namespace Azure.Storage.Blobs.Specialized
         {
             return range; // no-op
         }
+
+        /// <summary>
+        /// Accessor for extensions of <see cref="BlobBaseClient"/> in other packages, granting
+        /// access to internal details on a<see cref="BlobContainerClient"/>'s pipeline.
+        /// This lets them create extensions methods on <see cref="BlobContainerClient"/> to
+        /// create the specialized <see cref="BlobBaseClient"/> while maintaining client options,
+        /// much like the standard method <see cref="BlobContainerClient.GetBlobClient(string)"/>.
+        /// </summary>
+        /// <param name="client"></param>
+        /// <returns>The details.</returns>
+        protected static (BlobClientOptions options, HttpPipelinePolicy authPolicy) GetContainerPipelineInfo(BlobContainerClient client)
+            => (client.SourceOptions, client.AuthenticationPolicy);
     }
 
     /// <summary>
