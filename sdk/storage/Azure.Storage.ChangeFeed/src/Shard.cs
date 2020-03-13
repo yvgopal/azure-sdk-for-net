@@ -24,9 +24,14 @@ namespace Azure.Storage.ChangeFeed
         private readonly string _shardPath;
 
         /// <summary>
-        /// Queue of Chunks.  We are currently processing the Chunk at the head of the queue.
+        /// Queue of the paths to Chunks we haven't processed.
         /// </summary>
-        private readonly Queue<Chunk> _chunks;
+        private readonly Queue<string> _chunks;
+
+        /// <summary>
+        /// The Chunk we are currently processing.
+        /// </summary>
+        private Chunk _currentChunk;
 
         /// <summary>
         /// The index of the Chunk we are processing.
@@ -50,7 +55,7 @@ namespace Azure.Storage.ChangeFeed
         {
             _containerClient = containerClient;
             _shardPath = shardPath;
-            _chunks = new Queue<Chunk>();
+            _chunks = new Queue<string>();
             _isInitialized = false;
             _chunkIndex = shardCursor?.EventIndex ?? 0;
             _eventIndex = shardCursor?.EventIndex ?? 0;
@@ -67,8 +72,8 @@ namespace Azure.Storage.ChangeFeed
                     if (blobHierarchyItem.IsPrefix)
                         continue;
 
-                    Chunk chunk = new Chunk(_containerClient, blobHierarchyItem.Blob.Name);
-                    _chunks.Enqueue(chunk);
+                    //Chunk chunk = new Chunk(_containerClient, blobHierarchyItem.Blob.Name);
+                    _chunks.Enqueue(blobHierarchyItem.Blob.Name);
                 }
             }
             else
@@ -79,26 +84,47 @@ namespace Azure.Storage.ChangeFeed
                     if (blobHierarchyItem.IsPrefix)
                         continue;
 
-                    Chunk chunk = new Chunk(_containerClient, blobHierarchyItem.Blob.Name);
-                    _chunks.Enqueue(chunk);
+                    //Chunk chunk = new Chunk(_containerClient, blobHierarchyItem.Blob.Name);
+                    _chunks.Enqueue(blobHierarchyItem.Blob.Name);
                 }
             }
+
+            // Fast forward to current Chunk
+            if (_chunkIndex > 0)
+            {
+                //TODO possible off by 1 error here.
+                for (int i = 0; i < _chunkIndex; i++)
+                {
+                    _chunks.Dequeue();
+                }
+            }
+
+            _currentChunk = new Chunk(_containerClient, _chunks.Dequeue(), _eventIndex);
             _isInitialized = true;
         }
 
         public BlobChangeFeedShardCursor GetCursor()
             => new BlobChangeFeedShardCursor(
                 _chunkIndex,
-                _chunks.Peek().EventIndex);
+                _currentChunk.EventIndex);
 
-        public bool HasNext()
+        public async Task<bool> HasNext(bool async)
         {
             if (!_isInitialized)
             {
                 return true;
             }
 
-            return _chunks.Count > 0;
+            bool currentChunkHasNext;
+            if (async)
+            {
+                currentChunkHasNext = await _currentChunk.HasNext(async: true).ConfigureAwait(false);
+            }
+            else
+            {
+                currentChunkHasNext = _currentChunk.HasNext(async: false).EnsureCompleted();
+            }
+            return _chunks.Count > 0 || currentChunkHasNext;
         }
 
         public async Task<BlobChangeFeedEvent> Next(bool async)
@@ -115,37 +141,45 @@ namespace Azure.Storage.ChangeFeed
                 }
             }
 
-            if (!HasNext())
+            bool hasNext;
+            if (async)
+            {
+                hasNext = await HasNext(async: true).ConfigureAwait(false);
+            }
+            else
+            {
+                hasNext = HasNext(async: false).EnsureCompleted();
+            }
+            if (!hasNext)
             {
                 throw new InvalidOperationException("Shard doesn't have any more events");
             }
 
-            Chunk currentChunk = _chunks.Peek();
             BlobChangeFeedEvent changeFeedEvent;
 
             if (async)
             {
-                changeFeedEvent = await currentChunk.Next(async: true).ConfigureAwait(false);
+                changeFeedEvent = await _currentChunk.Next(async: true).ConfigureAwait(false);
             }
             else
             {
-                changeFeedEvent = currentChunk.Next(async: false).EnsureCompleted();
+                changeFeedEvent = _currentChunk.Next(async: false).EnsureCompleted();
             }
 
             // Remove currentChunk if it doesn't have another event.
             bool currentChunkHasNext;
             if (async)
             {
-                currentChunkHasNext = await currentChunk.HasNext(async: true).ConfigureAwait(false);
+                currentChunkHasNext = await _currentChunk.HasNext(async: true).ConfigureAwait(false);
             }
             else
             {
-                currentChunkHasNext = currentChunk.HasNext(async: false).EnsureCompleted();
+                currentChunkHasNext = _currentChunk.HasNext(async: false).EnsureCompleted();
             }
 
-            if (!currentChunkHasNext)
+            if (!currentChunkHasNext && _chunks.Count > 0)
             {
-                _chunks.Dequeue();
+                _currentChunk = new Chunk(_containerClient, _chunks.Dequeue());
                 _chunkIndex++;
             }
             return changeFeedEvent;

@@ -155,7 +155,17 @@ namespace Azure.Storage.ChangeFeed
                 changeFeedEventList.Add(changeFeedEvent);
 
                 // If the current shard is completed, remove it from _shards
-                if (!currentShard.HasNext())
+                bool currentShardHasNext;
+                if (async)
+                {
+                    currentShardHasNext = await currentShard.HasNext(async: true).ConfigureAwait(false);
+                }
+                else
+                {
+                    currentShardHasNext = currentShard.HasNext(async: false).EnsureCompleted();
+                }
+
+                if (!currentShardHasNext)
                 {
                     _shards.RemoveAt(_shardIndex);
                 }
