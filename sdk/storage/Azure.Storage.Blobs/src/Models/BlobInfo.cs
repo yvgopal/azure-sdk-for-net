@@ -60,11 +60,6 @@ namespace Azure.Storage.Blobs.Models
 #pragma warning restore CA1819 // Properties should not return arrays
 
         /// <summary>
-        /// Algorithm used for the <see cref="ContentHash"/>.
-        /// </summary>
-        public BlobHashAlgorithm? ContentHashAlgorithm { get; }
-
-        /// <summary>
         /// Details returned when downloading a Blob
         /// </summary>
         public BlobDownloadDetails Details { get; private set; }

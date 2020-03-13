@@ -437,41 +437,6 @@ namespace Azure.Storage.Blobs.Specialized
             }
         }
 
-        /// <summary>
-        /// Creates a shared access signature (SAS) token targeting the same blob as this client, authenticating
-        /// the SAS with this client's stored <see cref="StorageSharedKeyCredential"/>. If this client targets a
-        /// specific blob snapshot, the SAS will target that specific snapshot as well.
-        ///
-        /// For more information, see
-        /// <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/delegate-access-with-shared-access-signature"/>.
-        /// and
-        /// <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/create-service-sas"/>
-        /// </summary>
-        /// <param name="blobSasSignatureValues">The values to construct the SAS with.</param>
-        /// <param name="credential">Storage credential to sign with.</param>
-        /// <returns>The URI query string representing the SAS token, WITHOUT a prepended "?".</returns>
-#pragma warning disable CA1801, CA1822 // dev supression for stub API review
-        public string GenerateSas(BlobSasSignatureValues blobSasSignatureValues, StorageSharedKeyCredential credential)
-            => throw new NotImplementedException();
-#pragma warning disable CA1801, CA1822 // dev supression for stub API review
-
-        /// <summary>
-        /// Creates a shared access signature (SAS) token targeting the same container as this client, authenticating
-        /// the SAS with the provided <see cref="UserDelegationKey"/>.
-        ///
-        /// For more information, see
-        /// <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/delegate-access-with-shared-access-signature"/>.
-        /// and
-        /// <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas"/>.
-        /// </summary>
-        /// <param name="blobSasSignatureValues">The values to construct the SAS with.</param>
-        /// <param name="userDelegationKey">The user delegation key to sign the SAS with.</param>
-        /// <returns>The URI query string representing the SAS token, WITHOUT a prepended "?".</returns>
-#pragma warning disable CA1801, CA1822 // dev supression for stub API review
-        public string GenerateUserDelegationSas(BlobSasSignatureValues blobSasSignatureValues, UserDelegationKey userDelegationKey)
-            => throw new NotImplementedException();
-#pragma warning restore CA1801, CA1822 // dev supression for stub API review
-
         ///// <summary>
         ///// Creates a clone of this instance that references a version ID rather than the base blob.
         ///// </summary>

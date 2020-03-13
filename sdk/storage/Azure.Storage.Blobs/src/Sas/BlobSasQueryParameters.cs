@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Text;
 
 namespace Azure.Storage.Sas
@@ -16,7 +15,6 @@ namespace Azure.Storage.Sas
     ///
     /// For more information, <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-a-service-sas"/>.
     /// </summary>
-    [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class BlobSasQueryParameters : SasQueryParameters
     {
         internal UserDelegationKeyProperties KeyProperties { get; set; }
