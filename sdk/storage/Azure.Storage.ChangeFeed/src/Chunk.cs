@@ -19,19 +19,35 @@ namespace Azure.Storage.ChangeFeed
     /// </summary>
     internal class Chunk
     {
+        /// <summary>
+        /// Blob Client for downloading the Chunk.
+        /// </summary>
         private readonly BlobClient _blobClient;
-        //private int _eventCursor;
+
+        /// <summary>
+        /// The index of the event we are currently processing.
+        /// </summary>
+        //TODO this might not work if we don't download the entire chunk at a time.
+        public long EventIndex { get; private set; }
+
+        /// <summary>
+        /// Avro Reader to parser the Events.
+        /// </summary>
         private IFileReader<GenericRecord> _avroReader;
 
+        /// <summary>
+        /// If this Chunk has been initalized.
+        /// </summary>
         private bool _isInitialized;
 
         public Chunk(
             BlobContainerClient containerClient,
-            string chunkPath)
+            string chunkPath,
+            long? eventIndex = default)
         {
             _blobClient = containerClient.GetBlobClient(chunkPath);
             _isInitialized = false;
-            //_eventCursor = 0;
+            EventIndex = eventIndex ?? 0;
         }
 
         //TODO need to figure out how to not download the entire chunk
@@ -50,6 +66,17 @@ namespace Azure.Storage.ChangeFeed
             }
             _isInitialized = true;
             _avroReader = DataFileReader<GenericRecord>.OpenReader(blobDownloadInfo.Content);
+
+            // Fast forward to next event.
+            //TODO this won't work if we decide to only download part of the Chunck.
+            if (EventIndex > 0)
+            {
+                for (int i = 0; i < EventIndex; i++)
+                {
+                    //TODO add async version of this.
+                    _avroReader.Next();
+                }
+            }
         }
 
         //TODO what if the Segment isn't Finalized??
@@ -113,6 +140,7 @@ namespace Azure.Storage.ChangeFeed
                 genericRecord = _avroReader.Next();
             }
 
+            EventIndex++;
             return new BlobChangeFeedEvent(genericRecord);
         }
     }

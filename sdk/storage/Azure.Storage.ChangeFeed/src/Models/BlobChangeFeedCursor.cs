@@ -25,21 +25,24 @@ namespace Azure.Storage.ChangeFeed.Models
         /// <summary>
         /// EndDateTime.
         /// </summary>
-        public DateTimeOffset EndDateTime { get; internal set; }
+        public DateTimeOffset? EndDateTime { get; internal set; }
 
         /// <summary>
-        /// SegmentCursor.
+        /// The Segment Cursor for the current segment.
         /// </summary>
-        public int SegmentCursor { get; internal set; }
+        public BlobChangeFeedSegmentCursor CurrentSegmentCursor { get; internal set; }
 
-        /// <summary>
-        /// ShardCursor.
-        /// </summary>
-        public int ShardCursor { get; internal set; }
+        internal BlobChangeFeedCursor(
+            long urlHash,
+            DateTimeOffset? endDateTime,
+            BlobChangeFeedSegmentCursor currentSegmentCursor)
+        {
+            CursorVersion = 1;
+            UrlHash = urlHash;
+            EndDateTime = endDateTime;
+            CurrentSegmentCursor = currentSegmentCursor;
+        }
 
-        /// <summary>
-        /// ChunkCursor.
-        /// </summary>
-        public int ChunkCursor { get; internal set; }
+        internal BlobChangeFeedCursor() { }
     }
 }

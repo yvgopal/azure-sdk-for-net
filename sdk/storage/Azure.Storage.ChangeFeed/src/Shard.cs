@@ -13,19 +13,47 @@ namespace Azure.Storage.ChangeFeed
 {
     internal class Shard
     {
+        /// <summary>
+        /// Container Client for listing Chunks.
+        /// </summary>
         private readonly BlobContainerClient _containerClient;
+
+        /// <summary>
+        /// The path to this Shard.
+        /// </summary>
         private readonly string _shardPath;
+
+        /// <summary>
+        /// Queue of Chunks.  We are currently processing the Chunk at the head of the queue.
+        /// </summary>
         private readonly Queue<Chunk> _chunks;
+
+        /// <summary>
+        /// The index of the Chunk we are processing.
+        /// </summary>
+        private long _chunkIndex;
+
+        /// <summary>
+        /// User provided Event Index.
+        /// </summary>
+        private long _eventIndex;
+
+        /// <summary>
+        /// If this Shard has been initalized.
+        /// </summary>
         private bool _isInitialized;
 
         public Shard(
             BlobContainerClient containerClient,
-            string shardPath)
+            string shardPath,
+            BlobChangeFeedShardCursor shardCursor = default)
         {
             _containerClient = containerClient;
             _shardPath = shardPath;
             _chunks = new Queue<Chunk>();
             _isInitialized = false;
+            _chunkIndex = shardCursor?.EventIndex ?? 0;
+            _eventIndex = shardCursor?.EventIndex ?? 0;
         }
 
         private async Task Initalize(bool async)
@@ -57,6 +85,11 @@ namespace Azure.Storage.ChangeFeed
             }
             _isInitialized = true;
         }
+
+        public BlobChangeFeedShardCursor GetCursor()
+            => new BlobChangeFeedShardCursor(
+                _chunkIndex,
+                _chunks.Peek().EventIndex);
 
         public bool HasNext()
         {
@@ -113,6 +146,7 @@ namespace Azure.Storage.ChangeFeed
             if (!currentChunkHasNext)
             {
                 _chunks.Dequeue();
+                _chunkIndex++;
             }
             return changeFeedEvent;
         }

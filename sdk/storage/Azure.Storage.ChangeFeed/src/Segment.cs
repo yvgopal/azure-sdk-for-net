@@ -14,13 +14,39 @@ namespace Azure.Storage.ChangeFeed
 {
     internal class Segment
     {
+        /// <summary>
+        /// If this Segment is finalized.
+        /// </summary>
         public bool Finalized { get; private set; }
+
+        /// <summary>
+        /// The time (to the nearest hour) associated with this Segment.
+        /// </summary>
         public DateTimeOffset DateTime { get; private set; }
 
+        /// <summary>
+        /// Container client for listing Shards.
+        /// </summary>
         private readonly BlobContainerClient _containerClient;
+
+        /// <summary>
+        /// The path to the manifest for this Segment.
+        /// </summary>
         private readonly string _manifestPath;
+
+        /// <summary>
+        /// The Shards associated with this Segment.
+        /// </summary>
         private readonly List<Shard> _shards;
-        private int _shardCursor;
+
+        /// <summary>
+        /// The index of the Shard we will return the next event from.
+        /// </summary>
+        private int _shardIndex;
+
+        /// <summary>
+        /// If this Segement has been initalized.
+        /// </summary>
         private bool _isInitalized;
 
         public Segment(
@@ -31,7 +57,7 @@ namespace Azure.Storage.ChangeFeed
             _manifestPath = manifestPath;
             DateTime = manifestPath.ToDateTimeOffset();
             _shards = new List<Shard>();
-            _shardCursor = 0;
+            _shardIndex = 0;
         }
 
         private async Task Initalize(bool async)
@@ -75,6 +101,19 @@ namespace Azure.Storage.ChangeFeed
             _isInitalized = true;
         }
 
+        public BlobChangeFeedSegmentCursor GetCursor()
+        {
+            List<BlobChangeFeedShardCursor> shardCursors = new List<BlobChangeFeedShardCursor>();
+            foreach (Shard shard in _shards)
+            {
+                shardCursors.Add(shard.GetCursor());
+            }
+            return new BlobChangeFeedSegmentCursor(
+                segmentDateTime: DateTime,
+                shardCursors: shardCursors,
+                shardIndex: _shardIndex);
+        }
+
         public async Task<Page<BlobChangeFeedEvent>> GetPage(
             bool async,
             int? pageSize)
@@ -101,7 +140,7 @@ namespace Azure.Storage.ChangeFeed
             int i = 0;
             while (i < pageSize && _shards.Count > 0)
             {
-                Shard currentShard = _shards[_shardCursor];
+                Shard currentShard = _shards[_shardIndex];
 
                 BlobChangeFeedEvent changeFeedEvent;
                 if (async)
@@ -118,14 +157,14 @@ namespace Azure.Storage.ChangeFeed
                 // If the current shard is completed, remove it from _shards
                 if (!currentShard.HasNext())
                 {
-                    _shards.RemoveAt(_shardCursor);
+                    _shards.RemoveAt(_shardIndex);
                 }
 
                 i++;
-                _shardCursor++;
-                if (_shardCursor >= _shards.Count)
+                _shardIndex++;
+                if (_shardIndex >= _shards.Count)
                 {
-                    _shardCursor = 0;
+                    _shardIndex = 0;
                 }
             }
 

@@ -20,13 +20,38 @@ namespace Azure.Storage.ChangeFeed
         /// BlobContainerClient for making List Blob requests and creating Segments.
         /// </summary>
         private readonly BlobContainerClient _containerClient;
+
+        /// <summary>
+        /// Queue of paths to years we haven't processed yet.
+        /// </summary>
         private Queue<string> _years;
+
+        /// <summary>
+        /// Paths to segments in the current year we haven't processed yet.
+        /// </summary>
         private Queue<string> _segments;
+
+        /// <summary>
+        /// The Segment we are currently processing.
+        /// </summary>
         private Segment _currentSegment;
-        private DateTimeOffset _segmentCursor;
-        //TODO need to make mutable for live streaming events
+
+        /// <summary>
+        /// The latest time the Change Feed can safely be read from.
+        /// </summary>
+        //TODO this can advance while we are iterating through the Change Feed.  Figure out how to support this.
         private DateTimeOffset _lastConsumable;
+
+        /// <summary>
+        /// User-specified start time.  If the start time occurs before Change Feed was enabled
+        /// for this account, we will start at the beginning of the Change Feed.
+        /// </summary>
         private DateTimeOffset? _startTime;
+
+        /// <summary>
+        /// User-specified end time.  If the end time occurs after _lastConsumable, we will
+        /// end at _lastConsumable.
+        /// </summary>
         private DateTimeOffset? _endTime;
         //private string _segmentsPathsContinutationToken;
 
@@ -47,6 +72,16 @@ namespace Azure.Storage.ChangeFeed
             _isInitalized = false;
             _startTime = RoundHourDown(startTime);
             _endTime = RoundHourUp(endTime);
+        }
+
+        /// <summary>
+        /// Internal constructor for unit tests.
+        /// </summary>
+        /// <param name="containerClient"></param>
+        internal ChangeFeed(
+            BlobContainerClient containerClient)
+        {
+            _containerClient = containerClient;
         }
 
         private async Task Initalize(bool async)
@@ -91,6 +126,7 @@ namespace Azure.Storage.ChangeFeed
                 jsonMetaSegment = JsonDocument.Parse(blobDownloadInfo.Content);
             }
 
+            //TODO what happens when _lastConsumable advances an hour?
             _lastConsumable = jsonMetaSegment.RootElement.GetProperty("lastConsumable").GetDateTimeOffset();
 
             // Get year paths
@@ -127,7 +163,7 @@ namespace Azure.Storage.ChangeFeed
                     async: true,
                     yearPath: firstYearPath,
                     startTime: _startTime,
-                    endTime: _endTime)
+                    endTime: MinDateTime(_lastConsumable, _endTime))
                     .ConfigureAwait(false);
             }
             else
@@ -136,12 +172,11 @@ namespace Azure.Storage.ChangeFeed
                     async: false,
                     yearPath: firstYearPath,
                     startTime: _startTime,
-                    endTime: _endTime)
+                    endTime: MinDateTime(_lastConsumable, _endTime))
                     .EnsureCompleted();
             }
 
             _currentSegment = new Segment(_containerClient, _segments.Dequeue());
-            _segmentCursor = _currentSegment.DateTime;
             _isInitalized = true;
         }
 
@@ -196,7 +231,6 @@ namespace Azure.Storage.ChangeFeed
             if (!_currentSegment.HasNext() && _segments.Count > 0)
             {
                 _currentSegment = new Segment(_containerClient, _segments.Dequeue());
-                _segmentCursor = _currentSegment.DateTime;
             }
 
             // If _segments is empty, refill it
@@ -227,12 +261,13 @@ namespace Azure.Storage.ChangeFeed
                 if (_segments.Count > 0)
                 {
                     _currentSegment = new Segment(_containerClient, _segments.Dequeue());
-                    _segmentCursor = _currentSegment.DateTime;
                 }
             }
 
             return page;
         }
+
+
 
         public bool HasNext()
         {
@@ -244,14 +279,10 @@ namespace Azure.Storage.ChangeFeed
             {
                 return false;
             }
-            if (_endTime < LastConsumable())
-            {
-                return _segmentCursor <= _endTime;
-            }
-            else
-            {
-                return _segmentCursor <= LastConsumable();
-            }
+
+            DateTimeOffset end = MinDateTime(_lastConsumable, _endTime);
+
+            return _currentSegment.DateTime <= end;
         }
 
         //TODO how do update this?
@@ -259,6 +290,12 @@ namespace Azure.Storage.ChangeFeed
         {
             return _lastConsumable;
         }
+
+        public BlobChangeFeedCursor GetCursor()
+            => new BlobChangeFeedCursor(
+                urlHash: _containerClient.Uri.ToString().GetHashCode(),
+                endDateTime: _endTime,
+                currentSegmentCursor: _currentSegment.GetCursor());
 
         private async Task<Queue<string>> GetSegmentsInYear(
             bool async,
@@ -398,6 +435,16 @@ namespace Azure.Storage.ChangeFeed
             DateTimeOffset? newDateTimeOffest = RoundHourDown(dateTimeOffset.Value);
 
             return newDateTimeOffest.Value.AddHours(1);
+        }
+
+        private static DateTimeOffset MinDateTime(DateTimeOffset lastConsumable, DateTimeOffset? endDate)
+        {
+            if (endDate.HasValue && endDate.Value < lastConsumable)
+            {
+                return endDate.Value;
+            }
+
+            return lastConsumable;
         }
     }
 }
