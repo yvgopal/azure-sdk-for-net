@@ -1,5 +1,8 @@
 # Release History
 
+## 12.4.0-preview.1
+- Supports Azure.Storage.Blobs.Cryptography and Azure.Storage.Queues.Cryptography.
+
 ## 12.3.0 (2020-03)
 - Added InitialTransferLength to StorageTransferOptions
 
