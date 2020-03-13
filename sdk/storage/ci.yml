@@ -52,3 +52,5 @@ stages:
       safeName: AzureStorageFilesDataLake
     - name: Azure.Storage.Queues
       safeName: AzureStorageQueues
+    - name: Azure.Storage.Queues.Cryptography
+      safeName: AzureStorageQueuesCryptography
