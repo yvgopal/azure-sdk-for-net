@@ -220,10 +220,8 @@ namespace Azure.Storage.Blobs
         /// A <see cref="RequestFailedException"/> will be thrown if
         /// a failure occurs.
         /// </remarks>
-#pragma warning disable AZC0002 // Client method should have cancellationToken as the last optional parameter
         public virtual Response<BlobContentInfo> Upload(Stream content) =>
             Upload(content, CancellationToken.None);
-#pragma warning restore AZC0002 // Client method should have cancellationToken as the last optional parameter
 
         /// <summary>
         /// The <see cref="Upload(string)"/> operation creates a new block blob
@@ -248,10 +246,8 @@ namespace Azure.Storage.Blobs
         /// A <see cref="RequestFailedException"/> will be thrown if
         /// a failure occurs.
         /// </remarks>
-#pragma warning disable AZC0002 // Client method should have cancellationToken as the last optional parameter
         public virtual Response<BlobContentInfo> Upload(string path) =>
             Upload(path, CancellationToken.None);
-#pragma warning restore AZC0002 // Client method should have cancellationToken as the last optional parameter
 
         /// <summary>
         /// The <see cref="UploadAsync(Stream)"/> operation creates a new block blob
@@ -276,10 +272,8 @@ namespace Azure.Storage.Blobs
         /// A <see cref="RequestFailedException"/> will be thrown if
         /// a failure occurs.
         /// </remarks>
-#pragma warning disable AZC0002 // Client method should have cancellationToken as the last optional parameter
         public virtual async Task<Response<BlobContentInfo>> UploadAsync(Stream content) =>
             await UploadAsync(content, CancellationToken.None).ConfigureAwait(false);
-#pragma warning restore AZC0002 // Client method should have cancellationToken as the last optional parameter
 
         /// <summary>
         /// The <see cref="UploadAsync(string)"/> operation creates a new block blob
@@ -304,10 +298,8 @@ namespace Azure.Storage.Blobs
         /// A <see cref="RequestFailedException"/> will be thrown if
         /// a failure occurs.
         /// </remarks>
-#pragma warning disable AZC0002 // Client method should have cancellationToken as the last optional parameter
         public virtual async Task<Response<BlobContentInfo>> UploadAsync(string path) =>
             await UploadAsync(path, CancellationToken.None).ConfigureAwait(false);
-#pragma warning restore AZC0002 // Client method should have cancellationToken as the last optional parameter
 
         /// <summary>
         /// The <see cref="Upload(Stream, CancellationToken)"/> operation
@@ -337,7 +329,6 @@ namespace Azure.Storage.Blobs
         /// A <see cref="RequestFailedException"/> will be thrown if
         /// a failure occurs.
         /// </remarks>
-#pragma warning disable AZC0002 // Client method should have cancellationToken as the last optional parameter
         public virtual Response<BlobContentInfo> Upload(
             Stream content,
             CancellationToken cancellationToken) =>
@@ -345,7 +336,6 @@ namespace Azure.Storage.Blobs
                 content,
                 overwrite: false,
                 cancellationToken: cancellationToken);
-#pragma warning restore AZC0002 // Client method should have cancellationToken as the last optional parameter
 
         /// <summary>
         /// The <see cref="Upload(string, CancellationToken)"/> operation
@@ -375,7 +365,6 @@ namespace Azure.Storage.Blobs
         /// A <see cref="RequestFailedException"/> will be thrown if
         /// a failure occurs.
         /// </remarks>
-#pragma warning disable AZC0002 // Client method should have cancellationToken as the last optional parameter
         public virtual Response<BlobContentInfo> Upload(
             string path,
             CancellationToken cancellationToken) =>
@@ -383,7 +372,6 @@ namespace Azure.Storage.Blobs
                 path,
                 overwrite: false,
                 cancellationToken: cancellationToken);
-#pragma warning restore AZC0002 // Client method should have cancellationToken as the last optional parameter
 
         /// <summary>
         /// The <see cref="UploadAsync(Stream, CancellationToken)"/> operation
@@ -413,7 +401,6 @@ namespace Azure.Storage.Blobs
         /// A <see cref="RequestFailedException"/> will be thrown if
         /// a failure occurs.
         /// </remarks>
-#pragma warning disable AZC0002 // Client method should have cancellationToken as the last optional parameter
         public virtual Task<Response<BlobContentInfo>> UploadAsync(
             Stream content,
             CancellationToken cancellationToken) =>
@@ -421,7 +408,6 @@ namespace Azure.Storage.Blobs
                 content,
                 overwrite: false,
                 cancellationToken: cancellationToken);
-#pragma warning restore AZC0002 // Client method should have cancellationToken as the last optional parameter
 
         /// <summary>
         /// The <see cref="UploadAsync(string, CancellationToken)"/> operation
@@ -451,7 +437,6 @@ namespace Azure.Storage.Blobs
         /// A <see cref="RequestFailedException"/> will be thrown if
         /// a failure occurs.
         /// </remarks>
-#pragma warning disable AZC0002 // Client method should have cancellationToken as the last optional parameter
         public virtual async Task<Response<BlobContentInfo>> UploadAsync(
             string path,
             CancellationToken cancellationToken) =>
@@ -460,7 +445,6 @@ namespace Azure.Storage.Blobs
                 overwrite: false,
                 cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
-#pragma warning restore AZC0002 // Client method should have cancellationToken as the last optional parameter
 
         /// <summary>
         /// The <see cref="Upload(Stream, CancellationToken)"/> operation
