@@ -30,9 +30,9 @@ namespace Azure.Storage.Common.Cryptography
     public partial class ClientsideEncryptionOptions
     {
         public ClientsideEncryptionOptions() { }
-        public string EncryptionKeyWrapAlgorithm { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
-        public Azure.Core.Cryptography.IKeyEncryptionKey KeyEncryptionKey { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
-        public Azure.Core.Cryptography.IKeyEncryptionKeyResolver KeyResolver { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
+        public string EncryptionKeyWrapAlgorithm { get { throw null; } set { } }
+        public Azure.Core.Cryptography.IKeyEncryptionKey KeyEncryptionKey { get { throw null; } set { } }
+        public Azure.Core.Cryptography.IKeyEncryptionKeyResolver KeyResolver { get { throw null; } set { } }
     }
 }
 namespace Azure.Storage.Sas
@@ -92,13 +92,13 @@ namespace Azure.Storage.Sas
     public partial class AccountSasSignatureValues
     {
         public AccountSasSignatureValues(Azure.Storage.Sas.AccountSasPermissions permissions, System.DateTimeOffset expiresOn) { }
-        public System.DateTimeOffset ExpiresOn { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } }
-        public Azure.Storage.Sas.SasIPRange IPRange { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
-        public string Permissions { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } }
-        public Azure.Storage.Sas.SasProtocol Protocol { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
-        public Azure.Storage.Sas.AccountSasResourceTypes ResourceTypes { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
-        public Azure.Storage.Sas.AccountSasServices Services { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
-        public System.DateTimeOffset StartsOn { [System.Runtime.CompilerServices.CompilerGeneratedAttribute] get { throw null; } [System.Runtime.CompilerServices.CompilerGeneratedAttribute] set { } }
+        public System.DateTimeOffset ExpiresOn { get { throw null; } }
+        public Azure.Storage.Sas.SasIPRange IPRange { get { throw null; } set { } }
+        public string Permissions { get { throw null; } }
+        public Azure.Storage.Sas.SasProtocol Protocol { get { throw null; } set { } }
+        public Azure.Storage.Sas.AccountSasResourceTypes ResourceTypes { get { throw null; } set { } }
+        public Azure.Storage.Sas.AccountSasServices Services { get { throw null; } set { } }
+        public System.DateTimeOffset StartsOn { get { throw null; } set { } }
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
         public override bool Equals(object obj) { throw null; }
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Never)]
