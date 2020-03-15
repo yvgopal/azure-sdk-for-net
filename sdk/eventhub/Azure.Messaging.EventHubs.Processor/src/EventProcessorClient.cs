@@ -16,6 +16,7 @@ using Azure.Core.Pipeline;
 using Azure.Messaging.EventHubs.Consumer;
 using Azure.Messaging.EventHubs.Core;
 using Azure.Messaging.EventHubs.Diagnostics;
+using Azure.Messaging.EventHubs.Primitives;
 using Azure.Messaging.EventHubs.Processor;
 using Azure.Messaging.EventHubs.Processor.Diagnostics;
 using Azure.Storage.Blobs;
@@ -221,11 +222,22 @@ namespace Azure.Messaging.EventHubs
                     return _isRunningOverride.Value;
                 }
 
-                // Capture the load balancing task so we don't end up with a race condition.
+                if (ActiveLoadBalancingTask == null)
+                {
+                    try
+                    {
+                        if (!RunningTaskSemaphore.Wait(100))
+                        {
+                            return false;
+                        }
+                    }
+                    finally
+                    {
+                        RunningTaskSemaphore.Release();
+                    }
+                }
 
-                var loadBalancingTask = ActiveLoadBalancingTask;
-
-                return loadBalancingTask != null && !loadBalancingTask.IsCompleted;
+                return (!ActiveLoadBalancingTask?.IsCompleted) ?? false;
             }
 
             protected set => _isRunningOverride = value;
@@ -244,10 +256,10 @@ namespace Azure.Messaging.EventHubs
         internal virtual TimeSpan OwnershipExpiration => TimeSpan.FromSeconds(30);
 
         /// <summary>
-        ///   The instance of <see cref="EventProcessorEventSource" /> which can be mocked for testing.
+        ///   The instance of <see cref="EventProcessorClientEventSource" /> which can be mocked for testing.
         /// </summary>
         ///
-        internal EventProcessorEventSource Logger { get; set; } = EventProcessorEventSource.Log;
+        internal EventProcessorClientEventSource Logger { get; set; } = EventProcessorClientEventSource.Log;
 
         /// <summary>
         ///   Responsible for ownership claim for load balancing.
@@ -304,7 +316,7 @@ namespace Azure.Messaging.EventHubs
         ///   token sources that can be used to cancel the operation.  Partition ids are used as keys.
         /// </summary>
         ///
-        private ConcurrentDictionary<string, (Task, CancellationTokenSource)> ActivePartitionProcessors { get; set; } = new ConcurrentDictionary<string, (Task, CancellationTokenSource)>();
+        private ConcurrentDictionary<string, (Task, CancellationTokenSource)> ActivePartitionProcessors { get; } = new ConcurrentDictionary<string, (Task, CancellationTokenSource)>();
 
         /// <summary>
         ///   Initializes a new instance of the <see cref="EventProcessorClient"/> class.
@@ -322,6 +334,8 @@ namespace Azure.Messaging.EventHubs
         ///   If you have defined a shared access policy directly on the Event Hub itself, then copying the connection string from that
         ///   Event Hub will result in a connection string that contains the name.
         /// </remarks>
+        ///
+        /// <seealso href="https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string"/>
         ///
         public EventProcessorClient(BlobContainerClient checkpointStore,
                                     string consumerGroup,
@@ -347,6 +361,8 @@ namespace Azure.Messaging.EventHubs
         ///   Event Hub will result in a connection string that contains the name.
         /// </remarks>
         ///
+        /// <seealso href="https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string"/>
+        ///
         public EventProcessorClient(BlobContainerClient checkpointStore,
                                     string consumerGroup,
                                     string connectionString,
@@ -368,6 +384,8 @@ namespace Azure.Messaging.EventHubs
         ///   and can be used directly without passing the <paramref name="eventHubName" />.  The name of the Event Hub should be
         ///   passed only once, either as part of the connection string or separately.
         /// </remarks>
+        ///
+        /// <seealso href="https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string"/>
         ///
         public EventProcessorClient(BlobContainerClient checkpointStore,
                                     string consumerGroup,
@@ -391,6 +409,8 @@ namespace Azure.Messaging.EventHubs
         ///   and can be used directly without passing the <paramref name="eventHubName" />.  The name of the Event Hub should be
         ///   passed only once, either as part of the connection string or separately.
         /// </remarks>
+        ///
+        /// <seealso href="https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string"/>
         ///
         public EventProcessorClient(BlobContainerClient checkpointStore,
                                     string consumerGroup,
@@ -543,11 +563,10 @@ namespace Azure.Messaging.EventHubs
         ///
         /// <param name="cancellationToken">A <see cref="CancellationToken"/> instance to signal the request to cancel the start operation.  This won't affect the <see cref="EventProcessorClient" /> once it starts running.</param>
         ///
-        /// <exception cref="EventHubsException">Occurs when this <see cref="EventProcessorClient" /> instance is already closed.</exception>
         /// <exception cref="InvalidOperationException">Occurs when this method is invoked without <see cref="ProcessEventAsync" /> or <see cref="ProcessErrorAsync" /> set.</exception>
         ///
-        public virtual async Task StartProcessingAsync(CancellationToken cancellationToken = default)
-            => await StartProcessingInternalAsync(true, cancellationToken).ConfigureAwait(false);
+        public virtual async Task StartProcessingAsync(CancellationToken cancellationToken = default) =>
+            await StartProcessingInternalAsync(true, cancellationToken).ConfigureAwait(false);
 
         /// <summary>
         ///   Signals the <see cref="EventProcessorClient" /> to begin processing events.  Should this method be called while the processor
@@ -556,11 +575,10 @@ namespace Azure.Messaging.EventHubs
         ///
         /// <param name="cancellationToken">A <see cref="CancellationToken"/> instance to signal the request to cancel the start operation.  This won't affect the <see cref="EventProcessorClient" /> once it starts running.</param>
         ///
-        /// <exception cref="EventHubsException">Occurs when this <see cref="EventProcessorClient" /> instance is already closed.</exception>
         /// <exception cref="InvalidOperationException">Occurs when this method is invoked without <see cref="ProcessEventAsync" /> or <see cref="ProcessErrorAsync" /> set.</exception>
         ///
-        public virtual void StartProcessing(CancellationToken cancellationToken = default)
-            => StartProcessingInternalAsync(false, cancellationToken).EnsureCompleted();
+        public virtual void StartProcessing(CancellationToken cancellationToken = default) =>
+            StartProcessingInternalAsync(false, cancellationToken).EnsureCompleted();
 
         /// <summary>
         ///   Signals the <see cref="EventProcessorClient" /> to stop processing events.  Should this method be called while the processor
@@ -569,8 +587,8 @@ namespace Azure.Messaging.EventHubs
         ///
         /// <param name="cancellationToken">A <see cref="CancellationToken"/> instance to signal the request to cancel the stop operation.  If the operation is successfully canceled, the <see cref="EventProcessorClient" /> will keep running.</param>
         ///
-        public virtual async Task StopProcessingAsync(CancellationToken cancellationToken = default)
-            => await StopProcessingInternalAsync(true, cancellationToken).ConfigureAwait(false);
+        public virtual async Task StopProcessingAsync(CancellationToken cancellationToken = default) =>
+            await StopProcessingInternalAsync(true, cancellationToken).ConfigureAwait(false);
 
         /// <summary>
         ///   Signals the <see cref="EventProcessorClient" /> to stop processing events.  Should this method be called while the processor
@@ -579,8 +597,8 @@ namespace Azure.Messaging.EventHubs
         ///
         /// <param name="cancellationToken">A <see cref="CancellationToken"/> instance to signal the request to cancel the stop operation.  If the operation is successfully canceled, the <see cref="EventProcessorClient" /> will keep running.</param>
         ///
-        public virtual void StopProcessing(CancellationToken cancellationToken = default)
-            => StopProcessingInternalAsync(false, cancellationToken).EnsureCompleted();
+        public virtual void StopProcessing(CancellationToken cancellationToken = default) =>
+            StopProcessingInternalAsync(false, cancellationToken).EnsureCompleted();
 
         /// <summary>
         ///   Determines whether the specified <see cref="System.Object" /> is equal to this instance.
@@ -633,15 +651,13 @@ namespace Azure.Messaging.EventHubs
 
             // Parameter validation is done by Checkpoint constructor.
 
-            var checkpoint = new Checkpoint
-            (
-                FullyQualifiedNamespace,
-                EventHubName,
-                ConsumerGroup,
-                context.PartitionId,
-                eventData.Offset,
-                eventData.SequenceNumber
-            );
+            var checkpoint = new EventProcessorCheckpoint
+            {
+                FullyQualifiedNamespace = FullyQualifiedNamespace,
+                EventHubName = EventHubName,
+                ConsumerGroup = ConsumerGroup,
+                PartitionId = context.PartitionId
+            };
 
             using DiagnosticScope scope =
                 EventDataInstrumentation.ScopeFactory.CreateScope(DiagnosticProperty.EventProcessorCheckpointActivityName);
@@ -649,7 +665,7 @@ namespace Azure.Messaging.EventHubs
 
             try
             {
-                return StorageManager.UpdateCheckpointAsync(checkpoint, cancellationToken);
+                return StorageManager.UpdateCheckpointAsync(checkpoint, eventData, cancellationToken);
             }
             catch (Exception e)
             {
@@ -713,13 +729,20 @@ namespace Azure.Messaging.EventHubs
             await foreach (var partitionEvent in consumer.ReadEventsFromPartitionAsync(partitionId, startingPosition, ProcessingReadEventOptions, cancellationToken).ConfigureAwait(false))
             {
                 using DiagnosticScope diagnosticScope = EventDataInstrumentation.ScopeFactory.CreateScope(DiagnosticProperty.EventProcessorProcessingActivityName);
-                diagnosticScope.AddAttribute("kind", DiagnosticProperty.ConsumerKind);
+                diagnosticScope.AddAttribute(DiagnosticProperty.KindAttribute, DiagnosticProperty.ConsumerKind);
+                diagnosticScope.AddAttribute(DiagnosticProperty.EventHubAttribute, EventHubName);
+                diagnosticScope.AddAttribute(DiagnosticProperty.EndpointAttribute, FullyQualifiedNamespace);
 
                 if (diagnosticScope.IsEnabled
                     && partitionEvent.Data != null
                     && EventDataInstrumentation.TryExtractDiagnosticId(partitionEvent.Data, out string diagnosticId))
                 {
-                    diagnosticScope.AddLink(diagnosticId);
+                    var attributes = new Dictionary<string, string>()
+                    {
+                        { DiagnosticProperty.EnqueuedTimeAttribute, partitionEvent.Data.EnqueuedTime.ToUnixTimeMilliseconds().ToString() }
+                    };
+
+                    diagnosticScope.AddLink(diagnosticId, attributes);
                 }
 
                 diagnosticScope.Start();
@@ -836,7 +859,7 @@ namespace Azure.Messaging.EventHubs
 
                 if (partitionIds != default)
                 {
-                    PartitionOwnership claimedOwnership = default;
+                    EventProcessorPartitionOwnership claimedOwnership = default;
 
                     try
                     {
@@ -844,7 +867,10 @@ namespace Azure.Messaging.EventHubs
                     }
                     catch (EventHubsException ex)
                     {
-                        var errorEventArgs = new ProcessErrorEventArgs(null, ex.Message, ex.InnerException ?? ex, cancellationToken);
+                        var partitionId = Resources.OperationClaimOwnership.Equals(ex.GetFailureOperation()) ?
+                            ex.GetFailureData<string>() :
+                            null;
+                        var errorEventArgs = new ProcessErrorEventArgs(partitionId, ex.Message, ex.InnerException ?? ex, cancellationToken);
                         _ = OnProcessErrorAsync(errorEventArgs);
                     }
                     catch (Exception ex)
@@ -917,7 +943,7 @@ namespace Azure.Messaging.EventHubs
             await OnPartitionInitializingAsync(initializingEventArgs).ConfigureAwait(false);
 
             cancellationToken.ThrowIfCancellationRequested<TaskCanceledException>();
-            IEnumerable<Checkpoint> availableCheckpoints;
+            IEnumerable<EventProcessorCheckpoint> availableCheckpoints;
 
             try
             {
@@ -946,17 +972,13 @@ namespace Azure.Messaging.EventHubs
             {
                 if (checkpoint.PartitionId == partitionId)
                 {
-                    // When resuming from a checkpoint, the intent to process the next available event in the stream which
-                    // follows the one that was used to create the checkpoint.  Create the position using an exclusive offset.
-
-                    startingPosition = EventPosition.FromOffset(checkpoint.Offset, false);
-                    break;
+                    startingPosition = checkpoint.StartingPosition;
                 }
             }
 
-            var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(RunningTaskTokenSource.Token);
-            var processingTask = RunPartitionProcessingAsync(partitionId, startingPosition, tokenSource.Token);
+            var processingTask = RunPartitionProcessingAsync(partitionId, startingPosition, RunningTaskTokenSource.Token);
 
+            var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(RunningTaskTokenSource.Token);
             ActivePartitionProcessors[partitionId] = (processingTask, tokenSource);
             Logger.StartPartitionProcessingComplete(Identifier);
         }
@@ -1017,15 +1039,17 @@ namespace Azure.Messaging.EventHubs
         }
 
         /// <summary>
-        /// Signals the <see cref="EventProcessorClient" /> to begin processing events. Should this method be called while the processor is running, no action is taken.
+        ///   Signals the <see cref="EventProcessorClient" /> to begin processing events. Should this method be called while the processor is running, no action is taken.
         /// </summary>
         ///
-        /// <param name="async">A <see cref="bool"/> flag indicating weather method should be executed synchronously or asynchronously.</param>
+        /// <param name="async">When <c>true</c>, the method will be executed asynchronously; otherwise, it will execute synchronously.</param>
         /// <param name="cancellationToken">A <see cref="CancellationToken"/> instance to signal the request to cancel the start operation.  This won't affect the <see cref="EventProcessorClient" /> once it starts running.</param>
         ///
         /// <exception cref="EventHubsException">Occurs when this <see cref="EventProcessorClient" /> instance is already closed.</exception>
         /// <exception cref="InvalidOperationException">Occurs when this method is invoked without <see cref="ProcessEventAsync" /> or <see cref="ProcessErrorAsync" /> set.</exception>
-        private async Task StartProcessingInternalAsync(bool async, CancellationToken cancellationToken)
+        ///
+        private async Task StartProcessingInternalAsync(bool async,
+                                                        CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested<TaskCanceledException>();
 
@@ -1081,12 +1105,16 @@ namespace Azure.Messaging.EventHubs
             }
         }
 
+
         /// <summary>
-        /// Signals the <see cref="EventProcessorClient" /> to stop processing events. Should this method be called while the processor is not running, no action is taken.
+        ///   Signals the <see cref="EventProcessorClient" /> to stop processing events. Should this method be called while the processor is not running, no action is taken.
         /// </summary>
-        /// <param name="async">A <see cref="bool"/> flag indicating weather method should be executed synchronously or asynchronously.</param>
+        ///
+        /// <param name="async">When <c>true</c>, the method will be executed asynchronously; otherwise, it will execute synchronously.</param>
         /// <param name="cancellationToken">A <see cref="CancellationToken"/> instance to signal the request to cancel the stop operation.  If the operation is successfully canceled, the <see cref="EventProcessorClient" /> will keep running.</param>
-        private async Task StopProcessingInternalAsync(bool async, CancellationToken cancellationToken)
+        ///
+        private async Task StopProcessingInternalAsync(bool async,
+                                                       CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested<TaskCanceledException>();
             Logger.EventProcessorStopStart(Identifier);
@@ -1125,9 +1153,9 @@ namespace Azure.Messaging.EventHubs
                         }
                         else
                         {
-#pragma warning disable AZC0102
+#pragma warning disable AZC0102 // Do not use GetAwaiter().GetResult(). Use the TaskExtensions.EnsureCompleted() extension method instead.
                             ActiveLoadBalancingTask.GetAwaiter().GetResult();
-#pragma warning restore AZC0102
+#pragma warning restore AZC0102 // Do not use GetAwaiter().GetResult(). Use the TaskExtensions.EnsureCompleted() extension method instead.
                         }
 
                     }
@@ -1153,18 +1181,17 @@ namespace Azure.Messaging.EventHubs
                         await Task.WhenAll(stopPartitionProcessingTasks).ConfigureAwait(false);
 
                         // Stop the LoadBalancer.
-                        await LoadBalancer.RelinquishOwnershipAsync(cancellationToken).ConfigureAwait(false);
+                        await LoadBalancer.RelinquishOwnershipAsync(CancellationToken.None).ConfigureAwait(false);
                     }
                     else
                     {
                         Task.WaitAll(stopPartitionProcessingTasks);
 
                         // Stop the LoadBalancer.
-#pragma warning disable AZC0102
-                        LoadBalancer.RelinquishOwnershipAsync(cancellationToken).GetAwaiter().GetResult();
-#pragma warning restore AZC0102
+#pragma warning disable AZC0102 // Do not use GetAwaiter().GetResult(). Use the TaskExtensions.EnsureCompleted() extension method instead.
+                        LoadBalancer.RelinquishOwnershipAsync(CancellationToken.None).GetAwaiter().GetResult();
+#pragma warning restore AZC0102 // Do not use GetAwaiter().GetResult(). Use the TaskExtensions.EnsureCompleted() extension method instead.
                     }
-
 
                     // We need to wait until all tasks have stopped before making the load balancing task null.  If we did it sooner, we
                     // would have a race condition where the user could update the processing handlers while some pumps are still running.

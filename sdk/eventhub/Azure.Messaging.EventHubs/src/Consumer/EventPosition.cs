@@ -131,14 +131,8 @@ namespace Azure.Messaging.EventHubs.Consumer
         ///
         /// <returns><c>true</c> if the specified <see cref="EventPosition" /> is equal to this instance; otherwise, <c>false</c>.</returns>
         ///
-        [EditorBrowsable(EditorBrowsableState.Never)]
         public bool Equals(EventPosition other)
         {
-            if (ReferenceEquals(this, other))
-            {
-                return true;
-            }
-
             return (Offset == other.Offset)
                 && (SequenceNumber == other.SequenceNumber)
                 && (EnqueuedTime == other.EnqueuedTime)
@@ -158,7 +152,7 @@ namespace Azure.Messaging.EventHubs.Consumer
             obj switch
             {
                 EventPosition other => Equals(other),
-                _ => ReferenceEquals(this, obj)
+                _ => false
             };
 
         /// <summary>
@@ -213,24 +207,24 @@ namespace Azure.Messaging.EventHubs.Consumer
         ///   Determines whether the specified <see cref="EventPosition" /> instances are equal to each other.
         /// </summary>
         ///
-        /// <param name="first">The first <see cref="EventPosition" /> to consider.</param>
-        /// <param name="second">The second <see cref="EventPosition" /> to consider.</param>
+        /// <param name="left">The first <see cref="EventPosition" /> to consider.</param>
+        /// <param name="right">The second <see cref="EventPosition" /> to consider.</param>
         ///
         /// <returns><c>true</c> if the two specified <see cref="EventPosition" /> instances are equal; otherwise, <c>false</c>.</returns>
         ///
-        public static bool operator ==(EventPosition first,
-                                       EventPosition second) => first.Equals(second);
+        public static bool operator ==(EventPosition left,
+                                       EventPosition right) => left.Equals(right);
 
         /// <summary>
         ///   Determines whether the specified <see cref="EventPosition" /> instances are not equal to each other.
         /// </summary>
         ///
-        /// <param name="first">The first <see cref="EventPosition" /> to consider.</param>
-        /// <param name="second">The second <see cref="EventPosition" /> to consider.</param>
+        /// <param name="left">The first <see cref="EventPosition" /> to consider.</param>
+        /// <param name="right">The second <see cref="EventPosition" /> to consider.</param>
         ///
         /// <returns><c>true</c> if the two specified <see cref="EventPosition" /> instances are not equal; otherwise, <c>false</c>.</returns>
         ///
-        public static bool operator !=(EventPosition first,
-                                       EventPosition second) => (!first.Equals(second));
+        public static bool operator !=(EventPosition left,
+                                       EventPosition right) => (!left.Equals(right));
     }
 }
