@@ -202,7 +202,7 @@ namespace Azure.Storage.QuickQuery.Tests
             BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
             string query = @"SELECT _2 from BlobStorage WHERE _1 > 250;";
 
-            CvsTextConfiguration cvsTextConfiguration = new CvsTextConfiguration
+            CsvTextConfiguration cvsTextConfiguration = new CsvTextConfiguration
             {
                 ColumnSeparator = ',',
                 FieldQuote = '"',

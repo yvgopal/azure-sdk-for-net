@@ -52,9 +52,9 @@ namespace Azure.Storage.QuickQuery
             serialization.Format.DelimitedTextConfiguration = default;
             serialization.Format.JsonTextConfiguration = default;
 
-            if (textConfiguration.GetType() == typeof(CvsTextConfiguration))
+            if (textConfiguration.GetType() == typeof(CsvTextConfiguration))
             {
-                CvsTextConfiguration cvsTextConfiguration = textConfiguration as CvsTextConfiguration;
+                CsvTextConfiguration cvsTextConfiguration = textConfiguration as CsvTextConfiguration;
                 serialization.Format.Type = QuickQueryFormatType.Delimited;
                 serialization.Format.DelimitedTextConfiguration = new DelimitedTextConfigurationInternal
                 {

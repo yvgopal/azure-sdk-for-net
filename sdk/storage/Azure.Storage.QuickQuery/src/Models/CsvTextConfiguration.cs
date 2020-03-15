@@ -10,7 +10,7 @@ namespace Azure.Storage.QuickQuery.Models
     /// <summary>
     /// CSV text configuration.
     /// </summary>
-    public class CvsTextConfiguration : BlobQueryTextConfiguration
+    public class CsvTextConfiguration : BlobQueryTextConfiguration
     {
         /// <summary>
         /// Column separator.
