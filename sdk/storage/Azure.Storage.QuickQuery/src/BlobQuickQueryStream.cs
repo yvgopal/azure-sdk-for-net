@@ -93,14 +93,14 @@ namespace Azure.Storage.QuickQuery
                     destinationArray: buffer,
                     destinationIndex: offset,
                     length: remainingBytes);
+                _bufferOffset += remainingBytes;
+                return remainingBytes;
             }
-
-            // Decrement count to reflect how maybe bytes we'll still try to copy.
-            count -= remainingBytes;
 
             // Reset _bufferOffset, _bufferLength, and remainingBytes
             _bufferOffset = 0;
             _bufferLength = 0;
+            remainingBytes = 0;
 
             // We've caught up to the end of the _avroStream, but it isn't necessarly the end of the stream.
             // TODO what to do in this case?  If we return 0, we are indicating the end of stream

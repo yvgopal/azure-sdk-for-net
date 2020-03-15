@@ -94,7 +94,7 @@ namespace Azure.Storage.QuickQuery.Tests
 
         [Test]
         [Ignore("Don't want to record 16 MB of data.")]
-        public async Task QueryAsync_Large()
+        public async Task QueryAsync_MultipleDataRecords()
         {
             // Arrange
             await using DisposingContainer test = await GetTestContainerAsync();
@@ -129,6 +129,37 @@ namespace Azure.Storage.QuickQuery.Tests
             Assert.AreEqual(12 * Constants.MB, progressReporter.List[2]);
             Assert.AreEqual(16 * Constants.MB, progressReporter.List[3]);
             Assert.AreEqual(16 * Constants.MB, progressReporter.List[4]);
+        }
+
+        [Test]
+        [Ignore("Don't want to record 120 MB of data.")]
+        public async Task QueryAsync_Large()
+        {
+            // Arrange
+            await using DisposingContainer test = await GetTestContainerAsync();
+            BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
+            Stream stream = CreateDataStream(120 * Constants.MB);
+            await blockBlobClient.UploadAsync(stream);
+
+            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
+            string query = @"SELECT * from BlobStorage";
+
+            // Act
+            TestProgress progressReporter = new TestProgress();
+            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(
+                query,
+                progressReceiver: progressReporter);
+
+            stream.Seek(0, SeekOrigin.Begin);
+            using StreamReader expectedStreamReader = new StreamReader(stream);
+            string expected = await expectedStreamReader.ReadToEndAsync();
+
+            using StreamReader actualStreamReader = new StreamReader(response.Value.Content);
+            string actual = await actualStreamReader.ReadToEndAsync();
+
+            // Assert
+            // Check we got back the same content that we uploaded.
+            Assert.AreEqual(expected, actual);
         }
 
         [Test]
