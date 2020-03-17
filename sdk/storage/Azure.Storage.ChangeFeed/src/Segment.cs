@@ -49,15 +49,19 @@ namespace Azure.Storage.ChangeFeed
         /// </summary>
         private bool _isInitalized;
 
+        private BlobChangeFeedSegmentCursor _cursor;
+
         public Segment(
             BlobContainerClient containerClient,
-            string manifestPath)
+            string manifestPath,
+            BlobChangeFeedSegmentCursor cursor = default)
         {
             _containerClient = containerClient;
             _manifestPath = manifestPath;
             DateTime = manifestPath.ToDateTimeOffset();
             _shards = new List<Shard>();
-            _shardIndex = 0;
+            _cursor = cursor;
+            _shardIndex = cursor?.ShardIndex ?? 0;
         }
 
         private async Task Initalize(bool async)
@@ -91,12 +95,14 @@ namespace Azure.Storage.ChangeFeed
             string statusString = jsonManifest.RootElement.GetProperty("status").GetString();
             Finalized = statusString == "Finalized";
 
+            int i = 0;
             foreach (JsonElement shardJsonElement in jsonManifest.RootElement.GetProperty("chunkFilePaths").EnumerateArray())
             {
                 //TODO cleanup this line
                 string shardPath = shardJsonElement.ToString().Substring("$blobchangefeed/".Length);
-                Shard shard = new Shard(_containerClient, shardPath);
+                Shard shard = new Shard(_containerClient, shardPath, _cursor?.ShardCursors?[i]);
                 _shards.Add(shard);
+                i++;
             }
             _isInitalized = true;
         }
@@ -114,7 +120,7 @@ namespace Azure.Storage.ChangeFeed
                 shardIndex: _shardIndex);
         }
 
-        public async Task<Page<BlobChangeFeedEvent>> GetPage(
+        public async Task<List<BlobChangeFeedEvent>> GetPage(
             bool async,
             int? pageSize)
         {
@@ -179,7 +185,7 @@ namespace Azure.Storage.ChangeFeed
             }
 
             //TODO how to get raw response for page?  Does it matter?
-            return new BlobChangeFeedEventPage(changeFeedEventList);
+            return changeFeedEventList;
         }
 
         //TODO figure out if this is right.

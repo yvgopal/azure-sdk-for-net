@@ -25,7 +25,7 @@ namespace Azure.Storage.ChangeFeed.Models
         /// <summary>
         /// EndDateTime.
         /// </summary>
-        public DateTimeOffset? EndDateTime { get; internal set; }
+        public DateTimeOffset? EndTime { get; internal set; }
 
         /// <summary>
         /// The Segment Cursor for the current segment.
@@ -39,7 +39,7 @@ namespace Azure.Storage.ChangeFeed.Models
         {
             CursorVersion = 1;
             UrlHash = urlHash;
-            EndDateTime = endDateTime;
+            EndTime = endDateTime;
             CurrentSegmentCursor = currentSegmentCursor;
         }
 

@@ -19,6 +19,11 @@ namespace Azure.Storage.ChangeFeed.Tests
         {
         }
 
+        //TODO better cursor tests
+        //TODO start and end time tests
+        //TODO page size tests
+        //TODO tests for BlobChangeFeedExtensions
+
         [Test]
         public async Task Test()
         {
@@ -31,6 +36,35 @@ namespace Azure.Storage.ChangeFeed.Tests
             {
                 Console.WriteLine(e.Id);
             }
+        }
+
+        [Test]
+        public async Task CursorTest()
+        {
+            BlobServiceClient service = GetServiceClient_SharedKey();
+            BlobChangeFeedClient blobChangeFeedClient = service.GetChangeFeedClient();
+            BlobChangeFeedAsyncPagable blobChangeFeedAsyncPagable
+                = blobChangeFeedClient.GetChangesAsync();
+            IAsyncEnumerable<Page<BlobChangeFeedEvent>> asyncEnumerable = blobChangeFeedAsyncPagable.AsPages(pageSizeHint: 10);
+            Page<BlobChangeFeedEvent> page = await asyncEnumerable.FirstAsync();
+            foreach (BlobChangeFeedEvent changeFeedEvent in page.Values)
+            {
+                Console.WriteLine(changeFeedEvent.Id);
+            }
+
+            Console.WriteLine("break");
+
+            BlobChangeFeedCursor cursor = blobChangeFeedAsyncPagable.GetCursor();
+
+            BlobChangeFeedAsyncPagable cursorBlobChangeFeedAsyncPagable
+                = blobChangeFeedClient.GetChangesAsync(cursor);
+
+            IList<BlobChangeFeedEvent> list = await cursorBlobChangeFeedAsyncPagable.ToListAsync();
+            foreach (BlobChangeFeedEvent e in list)
+            {
+                Console.WriteLine(e.Id);
+            }
+
         }
     }
 }

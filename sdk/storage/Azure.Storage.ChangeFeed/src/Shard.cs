@@ -57,7 +57,7 @@ namespace Azure.Storage.ChangeFeed
             _shardPath = shardPath;
             _chunks = new Queue<string>();
             _isInitialized = false;
-            _chunkIndex = shardCursor?.EventIndex ?? 0;
+            _chunkIndex = shardCursor?.ChunkIndex ?? 0;
             _eventIndex = shardCursor?.EventIndex ?? 0;
         }
 

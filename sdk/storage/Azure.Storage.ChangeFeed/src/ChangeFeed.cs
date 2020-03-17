@@ -36,6 +36,8 @@ namespace Azure.Storage.ChangeFeed
         /// </summary>
         private Segment _currentSegment;
 
+        private readonly BlobChangeFeedSegmentCursor _currentSegmentCursor;
+
         /// <summary>
         /// The latest time the Change Feed can safely be read from.
         /// </summary>
@@ -53,7 +55,6 @@ namespace Azure.Storage.ChangeFeed
         /// end at _lastConsumable.
         /// </summary>
         private DateTimeOffset? _endTime;
-        //private string _segmentsPathsContinutationToken;
 
         /// <summary>
         /// If this ChangeFeed has been initalized.
@@ -72,6 +73,20 @@ namespace Azure.Storage.ChangeFeed
             _isInitalized = false;
             _startTime = RoundHourDown(startTime);
             _endTime = RoundHourUp(endTime);
+        }
+
+        public ChangeFeed(
+            BlobServiceClient blobServiceClient,
+            BlobChangeFeedCursor cursor)
+        {
+            _containerClient = blobServiceClient.GetBlobContainerClient(Constants.ChangeFeed.ChangeFeedContainerName);
+            ValidateCursor(_containerClient, cursor);
+            _years = new Queue<string>();
+            _segments = new Queue<string>();
+            _isInitalized = false;
+            _startTime = cursor.CurrentSegmentCursor.SegmentTime;
+            _endTime = cursor.EndTime;
+            _currentSegmentCursor = cursor.CurrentSegmentCursor;
         }
 
         /// <summary>
@@ -143,7 +158,7 @@ namespace Azure.Storage.ChangeFeed
             if (_startTime.HasValue)
             {
                 while (_years.Count > 0
-                    && _years.Peek().ToDateTimeOffset() < _startTime)
+                    && _years.Peek().ToDateTimeOffset() < RoundDownToNearestYear(_startTime))
                 {
                     _years.Dequeue();
                 }
@@ -176,7 +191,10 @@ namespace Azure.Storage.ChangeFeed
                     .EnsureCompleted();
             }
 
-            _currentSegment = new Segment(_containerClient, _segments.Dequeue());
+            _currentSegment = new Segment(
+                _containerClient,
+                _segments.Dequeue(),
+                _currentSegmentCursor);
             _isInitalized = true;
         }
 
@@ -203,9 +221,6 @@ namespace Azure.Storage.ChangeFeed
                 throw new InvalidOperationException("Change feed doesn't have any more events");
             }
 
-            // Get next page
-            Page<BlobChangeFeedEvent> page;
-
             //TODO what should we return here?  Also do we really need to check this on every page?
             if (_currentSegment.DateTime > _endTime)
             {
@@ -218,53 +233,31 @@ namespace Azure.Storage.ChangeFeed
                 return new BlobChangeFeedEventPage();
             }
 
-            if (async)
-            {
-                page = await _currentSegment.GetPage(async: true, pageSize).ConfigureAwait(false);
-            }
-            else
-            {
-                page = _currentSegment.GetPage(async: false, pageSize).EnsureCompleted();
-            }
+            // Get next page
+            List<BlobChangeFeedEvent> blobChangeFeedEvents = new List<BlobChangeFeedEvent>();
 
-            // If the current segment is completed, remove it
-            if (!_currentSegment.HasNext() && _segments.Count > 0)
+            int remainingEvents = pageSize;
+            while (blobChangeFeedEvents.Count < pageSize
+                && HasNext())
             {
-                _currentSegment = new Segment(_containerClient, _segments.Dequeue());
-            }
-
-            // If _segments is empty, refill it
-            else if (_segments.Count == 0 && _years.Count > 0)
-            {
-                string yearPath = _years.Dequeue();
-
-                // Get Segments for first year
+                //TODO what if segment doesn't have a page size worth of data?
                 if (async)
                 {
-                    _segments = await GetSegmentsInYear(
-                        async: true,
-                        yearPath: yearPath,
-                        startTime: _startTime,
-                        endTime: _endTime)
-                        .ConfigureAwait(false);
+                    List<BlobChangeFeedEvent> newEvents = await _currentSegment.GetPage(async: true, remainingEvents).ConfigureAwait(false);
+                    blobChangeFeedEvents.AddRange(newEvents);
+                    remainingEvents -= newEvents.Count;
+                    await AdvanceSegmentIfNecessary(async: true).ConfigureAwait(false);
                 }
                 else
                 {
-                    _segments = GetSegmentsInYear(
-                        async: false,
-                        yearPath: yearPath,
-                        startTime: _startTime,
-                        endTime: _endTime)
-                        .EnsureCompleted();
-                }
-
-                if (_segments.Count > 0)
-                {
-                    _currentSegment = new Segment(_containerClient, _segments.Dequeue());
+                    List<BlobChangeFeedEvent> newEvents = _currentSegment.GetPage(async: false, remainingEvents).EnsureCompleted();
+                    blobChangeFeedEvents.AddRange(newEvents);
+                    remainingEvents -= newEvents.Count;
+                    AdvanceSegmentIfNecessary(async: false).EnsureCompleted();
                 }
             }
 
-            return page;
+            return new BlobChangeFeedEventPage(blobChangeFeedEvents);
         }
 
 
@@ -340,6 +333,47 @@ namespace Azure.Storage.ChangeFeed
             }
 
             return new Queue<string>(list);
+        }
+
+        private async Task AdvanceSegmentIfNecessary(bool async)
+        {
+            // If the current segment is completed, remove it
+            if (!_currentSegment.HasNext() && _segments.Count > 0)
+            {
+                _currentSegment = new Segment(_containerClient, _segments.Dequeue());
+            }
+
+            // If _segments is empty, refill it
+            // TODO pull this out into private method
+            else if (_segments.Count == 0 && _years.Count > 0)
+            {
+                string yearPath = _years.Dequeue();
+
+                // Get Segments for first year
+                if (async)
+                {
+                    _segments = await GetSegmentsInYear(
+                        async: true,
+                        yearPath: yearPath,
+                        startTime: _startTime,
+                        endTime: _endTime)
+                        .ConfigureAwait(false);
+                }
+                else
+                {
+                    _segments = GetSegmentsInYear(
+                        async: false,
+                        yearPath: yearPath,
+                        startTime: _startTime,
+                        endTime: _endTime)
+                        .EnsureCompleted();
+                }
+
+                if (_segments.Count > 0)
+                {
+                    _currentSegment = new Segment(_containerClient, _segments.Dequeue());
+                }
+            }
         }
 
         private async Task<Queue<string>> GetYearPaths(bool async)
@@ -445,6 +479,33 @@ namespace Azure.Storage.ChangeFeed
             }
 
             return lastConsumable;
+        }
+
+        private static DateTimeOffset? RoundDownToNearestYear(DateTimeOffset? dateTimeOffset)
+        {
+            if (dateTimeOffset == null)
+            {
+                return null;
+            }
+
+            return new DateTimeOffset(
+                year: dateTimeOffset.Value.Year,
+                month: 1,
+                day: 1,
+                hour: 0,
+                minute: 0,
+                second: 0,
+                offset: TimeSpan.Zero);
+        }
+
+        private static void ValidateCursor(
+            BlobContainerClient containerClient,
+            BlobChangeFeedCursor cursor)
+        {
+            if (containerClient.Uri.ToString().GetHashCode() != cursor.UrlHash)
+            {
+                throw new ArgumentException("Cursor URL does not match container URL");
+            }
         }
     }
 }

@@ -33,13 +33,19 @@ namespace Azure.Storage.ChangeFeed
             {
                 return default;
             }
-
+            segmentPath = segmentPath.Trim('/');
             string[] splitPath = segmentPath.Split('/');
             return new DateTimeOffset(
                 year: int.Parse(splitPath[2], CultureInfo.InvariantCulture),
-                month: int.Parse(splitPath[3], CultureInfo.InvariantCulture),
-                day: int.Parse(splitPath[4], CultureInfo.InvariantCulture),
-                hour: int.Parse(splitPath[5], CultureInfo.InvariantCulture) / 100,
+                month: splitPath.Length >= 4
+                    ? int.Parse(splitPath[3], CultureInfo.InvariantCulture)
+                    : 1,
+                day: splitPath.Length >= 5
+                    ? int.Parse(splitPath[4], CultureInfo.InvariantCulture)
+                    : 1,
+                hour: splitPath.Length >= 6
+                    ? int.Parse(splitPath[5], CultureInfo.InvariantCulture) / 100
+                    : 0,
                 minute: 0,
                 second: 0,
                 offset: TimeSpan.Zero);

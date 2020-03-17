@@ -20,19 +20,19 @@ namespace Azure.Storage.ChangeFeed.Models
         /// <summary>
         /// Index of the current Shard.
         /// </summary>
-        public long ShardIndex { get; private set; }
+        public int ShardIndex { get; private set; }
 
         /// <summary>
         /// The DateTimeOffset of the Segment.
         /// </summary>
-        public DateTimeOffset SegmentDateTime { get; private set; }
+        public DateTimeOffset SegmentTime { get; private set; }
 
         internal BlobChangeFeedSegmentCursor(
             DateTimeOffset segmentDateTime,
             List<BlobChangeFeedShardCursor> shardCursors,
-            long shardIndex)
+            int shardIndex)
         {
-            SegmentDateTime = segmentDateTime;
+            SegmentTime = segmentDateTime;
             ShardCursors = shardCursors;
             ShardIndex = shardIndex;
         }

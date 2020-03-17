@@ -17,9 +17,24 @@ namespace Azure.Storage.ChangeFeed
     {
         private ChangeFeed _changeFeed;
 
-        internal BlobChangeFeedPagable(BlobServiceClient serviceClient)
+        internal BlobChangeFeedPagable(
+            BlobServiceClient serviceClient,
+            DateTimeOffset? startTime = default,
+            DateTimeOffset? endTime = default)
         {
-            _changeFeed = new ChangeFeed(serviceClient);
+            _changeFeed = new ChangeFeed(
+                serviceClient,
+                startTime,
+                endTime);
+        }
+
+        internal BlobChangeFeedPagable(
+            BlobServiceClient serviceClient,
+            BlobChangeFeedCursor cursor)
+        {
+            _changeFeed = new ChangeFeed(
+                serviceClient,
+                cursor);
         }
 
         /// <summary>
@@ -32,5 +47,12 @@ namespace Azure.Storage.ChangeFeed
         {
             throw new NotImplementedException();
         }
+
+        /// <summary>
+        /// Gets the Cursor to resume from the current position.
+        /// </summary>
+        /// <returns></returns>
+        public BlobChangeFeedCursor GetCursor()
+            => _changeFeed.GetCursor();
     }
 }

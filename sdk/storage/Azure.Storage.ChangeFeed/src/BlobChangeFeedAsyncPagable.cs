@@ -27,9 +27,24 @@ namespace Azure.Storage.ChangeFeed
         /// <summary>
         /// Internal constructor.
         /// </summary>
-        internal BlobChangeFeedAsyncPagable(BlobServiceClient blobBerviceClient)
+        internal BlobChangeFeedAsyncPagable(
+            BlobServiceClient blobBerviceClient,
+            DateTimeOffset? startTime = default,
+            DateTimeOffset? endTime = default)
         {
-            _changeFeed = new ChangeFeed(blobBerviceClient);
+            _changeFeed = new ChangeFeed(
+                blobBerviceClient,
+                startTime,
+                endTime);
+        }
+
+        internal BlobChangeFeedAsyncPagable(
+            BlobServiceClient blobServiceClient,
+            BlobChangeFeedCursor cursor)
+        {
+            _changeFeed = new ChangeFeed(
+                blobServiceClient,
+                cursor);
         }
 
         /// <summary>
@@ -49,5 +64,12 @@ namespace Azure.Storage.ChangeFeed
                     pageSize: pageSizeHint ?? 512).ConfigureAwait(false);
             }
         }
+
+        /// <summary>
+        /// Gets the Cursor to resume from the current position.
+        /// </summary>
+        /// <returns></returns>
+        public BlobChangeFeedCursor GetCursor()
+            => _changeFeed.GetCursor();
     }
 }
