@@ -2,9 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
 using Azure.Storage.Blobs;
 
 namespace Azure.Storage.ChangeFeed
@@ -27,7 +25,7 @@ namespace Azure.Storage.ChangeFeed
         /// <summary>
         /// Builds a DateTimeOffset from a segment path.
         /// </summary>
-        internal static DateTimeOffset ToDateTimeOffset(this string segmentPath)
+        internal static DateTimeOffset? ToDateTimeOffset(this string segmentPath)
         {
             if (segmentPath == null)
             {
@@ -46,6 +44,58 @@ namespace Azure.Storage.ChangeFeed
                 hour: splitPath.Length >= 6
                     ? int.Parse(splitPath[5], CultureInfo.InvariantCulture) / 100
                     : 0,
+                minute: 0,
+                second: 0,
+                offset: TimeSpan.Zero);
+        }
+
+        /// <summary>
+        /// Rounds a DateTimeOffset down to the nearest hour.
+        /// </summary>
+        internal static DateTimeOffset? RoundDownToNearestHour(this DateTimeOffset? dateTimeOffset)
+        {
+            if (dateTimeOffset == null)
+            {
+                return null;
+            }
+
+            return new DateTimeOffset(
+                year: dateTimeOffset.Value.Year,
+                month: dateTimeOffset.Value.Month,
+                day: dateTimeOffset.Value.Day,
+                hour: dateTimeOffset.Value.Hour,
+                minute: 0,
+                second: 0,
+                offset: dateTimeOffset.Value.Offset);
+        }
+
+        /// <summary>
+        /// Rounds a DateTimeOffset up to the nearest hour.
+        /// </summary>
+        internal static DateTimeOffset? RoundUpToNearestHour(this DateTimeOffset? dateTimeOffset)
+        {
+            if (dateTimeOffset == null)
+            {
+                return null;
+            }
+
+            DateTimeOffset? newDateTimeOffest = dateTimeOffset.RoundDownToNearestHour();
+
+            return newDateTimeOffest.Value.AddHours(1);
+        }
+
+        internal static DateTimeOffset? RoundDownToNearestYear(this DateTimeOffset? dateTimeOffset)
+        {
+            if (dateTimeOffset == null)
+            {
+                return null;
+            }
+
+            return new DateTimeOffset(
+                year: dateTimeOffset.Value.Year,
+                month: 1,
+                day: 1,
+                hour: 0,
                 minute: 0,
                 second: 0,
                 offset: TimeSpan.Zero);

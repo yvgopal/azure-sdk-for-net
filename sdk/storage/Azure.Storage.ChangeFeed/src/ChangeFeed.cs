@@ -71,8 +71,8 @@ namespace Azure.Storage.ChangeFeed
             _years = new Queue<string>();
             _segments = new Queue<string>();
             _isInitalized = false;
-            _startTime = RoundHourDown(startTime);
-            _endTime = RoundHourUp(endTime);
+            _startTime = startTime.RoundDownToNearestHour();
+            _endTime = endTime.RoundUpToNearestHour();
         }
 
         public ChangeFeed(
@@ -158,7 +158,7 @@ namespace Azure.Storage.ChangeFeed
             if (_startTime.HasValue)
             {
                 while (_years.Count > 0
-                    && _years.Peek().ToDateTimeOffset() < RoundDownToNearestYear(_startTime))
+                    && _years.Peek().ToDateTimeOffset() < _startTime.RoundDownToNearestYear())
                 {
                     _years.Dequeue();
                 }
@@ -307,7 +307,7 @@ namespace Azure.Storage.ChangeFeed
                     if (blobHierarchyItem.IsPrefix)
                         continue;
 
-                    DateTimeOffset segmentDateTime = blobHierarchyItem.Blob.Name.ToDateTimeOffset();
+                    DateTimeOffset segmentDateTime = blobHierarchyItem.Blob.Name.ToDateTimeOffset().Value;
                     if (startTime.HasValue && segmentDateTime < startTime
                         || endTime.HasValue && segmentDateTime > endTime)
                         continue;
@@ -323,7 +323,7 @@ namespace Azure.Storage.ChangeFeed
                     if (blobHierarchyItem.IsPrefix)
                         continue;
 
-                    DateTimeOffset segmentDateTime = blobHierarchyItem.Blob.Name.ToDateTimeOffset();
+                    DateTimeOffset segmentDateTime = blobHierarchyItem.Blob.Name.ToDateTimeOffset().Value;
                     if (startTime.HasValue && segmentDateTime < startTime
                         || endTime.HasValue && segmentDateTime > endTime)
                         continue;
@@ -407,70 +407,6 @@ namespace Azure.Storage.ChangeFeed
             return new Queue<string>(list);
         }
 
-
-        private static string BuildSegmentPath(
-            int year,
-            int? month = null,
-            int? day = null,
-            int? hour = null)
-        {
-            StringBuilder stringBuilder = new StringBuilder(Constants.ChangeFeed.SegmentPrefix);
-
-            stringBuilder.Append(year + "/");
-
-            if (month.HasValue)
-            {
-                stringBuilder.Append(month.Value + "/");
-            }
-
-            if (day.HasValue)
-            {
-                stringBuilder.Append(day.Value + "/");
-            }
-
-            if (hour.HasValue)
-            {
-                stringBuilder.Append(hour.Value + "/");
-            }
-
-            return stringBuilder.ToString();
-        }
-
-        /// <summary>
-        /// Rounds a DateTimeOffset down to the nearest hour.
-        /// </summary>
-        private static DateTimeOffset? RoundHourDown(DateTimeOffset? dateTimeOffset)
-        {
-            if (dateTimeOffset == null)
-            {
-                return null;
-            }
-
-            return new DateTimeOffset(
-                year: dateTimeOffset.Value.Year,
-                month: dateTimeOffset.Value.Month,
-                day: dateTimeOffset.Value.Day,
-                hour: dateTimeOffset.Value.Hour,
-                minute: 0,
-                second: 0,
-                offset: dateTimeOffset.Value.Offset);
-        }
-
-        /// <summary>
-        /// Rounds a DateTimeOffset up to the nearest hour.
-        /// </summary>
-        private static DateTimeOffset? RoundHourUp(DateTimeOffset? dateTimeOffset)
-        {
-            if (dateTimeOffset == null)
-            {
-                return null;
-            }
-
-            DateTimeOffset? newDateTimeOffest = RoundHourDown(dateTimeOffset.Value);
-
-            return newDateTimeOffest.Value.AddHours(1);
-        }
-
         private static DateTimeOffset MinDateTime(DateTimeOffset lastConsumable, DateTimeOffset? endDate)
         {
             if (endDate.HasValue && endDate.Value < lastConsumable)
@@ -479,23 +415,6 @@ namespace Azure.Storage.ChangeFeed
             }
 
             return lastConsumable;
-        }
-
-        private static DateTimeOffset? RoundDownToNearestYear(DateTimeOffset? dateTimeOffset)
-        {
-            if (dateTimeOffset == null)
-            {
-                return null;
-            }
-
-            return new DateTimeOffset(
-                year: dateTimeOffset.Value.Year,
-                month: 1,
-                day: 1,
-                hour: 0,
-                minute: 0,
-                second: 0,
-                offset: TimeSpan.Zero);
         }
 
         private static void ValidateCursor(

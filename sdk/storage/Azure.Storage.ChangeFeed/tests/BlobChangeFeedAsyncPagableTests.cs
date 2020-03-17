@@ -22,7 +22,6 @@ namespace Azure.Storage.ChangeFeed.Tests
         //TODO better cursor tests
         //TODO start and end time tests
         //TODO page size tests
-        //TODO tests for BlobChangeFeedExtensions
 
         [Test]
         public async Task Test()

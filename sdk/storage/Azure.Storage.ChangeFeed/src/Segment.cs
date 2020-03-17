@@ -58,7 +58,7 @@ namespace Azure.Storage.ChangeFeed
         {
             _containerClient = containerClient;
             _manifestPath = manifestPath;
-            DateTime = manifestPath.ToDateTimeOffset();
+            DateTime = manifestPath.ToDateTimeOffset().Value;
             _shards = new List<Shard>();
             _cursor = cursor;
             _shardIndex = cursor?.ShardIndex ?? 0;
