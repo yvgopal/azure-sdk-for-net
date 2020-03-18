@@ -376,7 +376,7 @@ namespace Azure.Storage.ChangeFeed
             }
         }
 
-        private async Task<Queue<string>> GetYearPaths(bool async)
+        internal async Task<Queue<string>> GetYearPaths(bool async)
         {
             List<string> list = new List<string>();
 
