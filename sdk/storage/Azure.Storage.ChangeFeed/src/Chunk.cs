@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Avro.File;
 using Avro.Generic;
+using Azure.Core.Pipeline;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.ChangeFeed.Models;

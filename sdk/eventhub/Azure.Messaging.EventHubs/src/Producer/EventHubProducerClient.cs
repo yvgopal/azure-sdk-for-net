@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -114,6 +115,8 @@ namespace Azure.Messaging.EventHubs.Producer
         ///   Event Hub will result in a connection string that contains the name.
         /// </remarks>
         ///
+        /// <seealso href="https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string"/>
+        ///
         public EventHubProducerClient(string connectionString) : this(connectionString, null, null)
         {
         }
@@ -134,6 +137,8 @@ namespace Azure.Messaging.EventHubs.Producer
         ///   Event Hub will result in a connection string that contains the name.
         /// </remarks>
         ///
+        /// <seealso href="https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string"/>
+        ///
         public EventHubProducerClient(string connectionString,
                                       EventHubProducerClientOptions clientOptions) : this(connectionString, null, clientOptions)
         {
@@ -151,6 +156,8 @@ namespace Azure.Messaging.EventHubs.Producer
         ///   and can be used directly without passing the <paramref name="eventHubName" />.  The name of the Event Hub should be
         ///   passed only once, either as part of the connection string or separately.
         /// </remarks>
+        ///
+        /// <seealso href="https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string"/>
         ///
         public EventHubProducerClient(string connectionString,
                                       string eventHubName) : this(connectionString, eventHubName, null)
@@ -171,6 +178,8 @@ namespace Azure.Messaging.EventHubs.Producer
         ///   passed only once, either as part of the connection string or separately.
         /// </remarks>
         ///
+        /// <seealso href="https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-get-connection-string"/>
+        ///
         public EventHubProducerClient(string connectionString,
                                       string eventHubName,
                                       EventHubProducerClientOptions clientOptions)
@@ -189,7 +198,7 @@ namespace Azure.Messaging.EventHubs.Producer
         /// </summary>
         ///
         /// <param name="fullyQualifiedNamespace">The fully qualified Event Hubs namespace to connect to.  This is likely to be similar to <c>{yournamespace}.servicebus.windows.net</c>.</param>
-        /// <param name="eventHubName">The name of the specific Event Hub to associated the producer with.</param>
+        /// <param name="eventHubName">The name of the specific Event Hub to associate the producer with.</param>
         /// <param name="credential">The Azure managed identity credential to use for authorization.  Access controls may be specified by the Event Hubs namespace or the requested Event Hub, depending on Azure configuration.</param>
         /// <param name="clientOptions">A set of options to apply when configuring the producer.</param>
         ///
@@ -198,8 +207,7 @@ namespace Azure.Messaging.EventHubs.Producer
                                       TokenCredential credential,
                                       EventHubProducerClientOptions clientOptions = default)
         {
-            Argument.AssertNotNullOrEmpty(fullyQualifiedNamespace, nameof(fullyQualifiedNamespace));
-            Argument.AssertNotNullOrEmpty(fullyQualifiedNamespace, nameof(fullyQualifiedNamespace));
+            Argument.AssertWellFormedEventHubsNamespace(fullyQualifiedNamespace, nameof(fullyQualifiedNamespace));
             Argument.AssertNotNullOrEmpty(eventHubName, nameof(eventHubName));
             Argument.AssertNotNull(credential, nameof(credential));
 
@@ -271,10 +279,10 @@ namespace Azure.Messaging.EventHubs.Producer
         ///
         /// <returns>The set of information for the Event Hub that this client is associated with.</returns>
         ///
-        public virtual Task<EventHubProperties> GetEventHubPropertiesAsync(CancellationToken cancellationToken = default)
+        public virtual async Task<EventHubProperties> GetEventHubPropertiesAsync(CancellationToken cancellationToken = default)
         {
             Argument.AssertNotClosed(IsClosed, nameof(EventHubProducerClient));
-            return Connection.GetPropertiesAsync(RetryPolicy, cancellationToken);
+            return await Connection.GetPropertiesAsync(RetryPolicy, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -291,11 +299,11 @@ namespace Azure.Messaging.EventHubs.Producer
         ///   No new or extended information is presented.
         /// </remarks>
         ///
-        public virtual Task<string[]> GetPartitionIdsAsync(CancellationToken cancellationToken = default)
+        public virtual async Task<string[]> GetPartitionIdsAsync(CancellationToken cancellationToken = default)
         {
 
             Argument.AssertNotClosed(IsClosed, nameof(EventHubProducerClient));
-            return Connection.GetPartitionIdsAsync(RetryPolicy, cancellationToken);
+            return await Connection.GetPartitionIdsAsync(RetryPolicy, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -308,11 +316,11 @@ namespace Azure.Messaging.EventHubs.Producer
         ///
         /// <returns>The set of information for the requested partition under the Event Hub this client is associated with.</returns>
         ///
-        public virtual Task<PartitionProperties> GetPartitionPropertiesAsync(string partitionId,
-                                                                             CancellationToken cancellationToken = default)
+        public virtual async Task<PartitionProperties> GetPartitionPropertiesAsync(string partitionId,
+                                                                                   CancellationToken cancellationToken = default)
         {
             Argument.AssertNotClosed(IsClosed, nameof(EventHubProducerClient));
-            return Connection.GetPartitionPropertiesAsync(partitionId, RetryPolicy, cancellationToken);
+            return await Connection.GetPartitionPropertiesAsync(partitionId, RetryPolicy, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -330,11 +338,11 @@ namespace Azure.Messaging.EventHubs.Producer
         /// <seealso cref="SendAsync(IEnumerable{EventData}, SendEventOptions, CancellationToken)" />
         /// <seealso cref="SendAsync(EventDataBatch, CancellationToken)" />
         ///
-        internal virtual Task SendAsync(EventData eventData,
-                                        CancellationToken cancellationToken = default)
+        internal virtual async Task SendAsync(EventData eventData,
+                                              CancellationToken cancellationToken = default)
         {
             Argument.AssertNotNull(eventData, nameof(eventData));
-            return SendAsync(new[] { eventData }, null, cancellationToken);
+            await SendAsync(new[] { eventData }, null, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -353,12 +361,12 @@ namespace Azure.Messaging.EventHubs.Producer
         /// <seealso cref="SendAsync(IEnumerable{EventData}, SendEventOptions, CancellationToken)" />
         /// <seealso cref="SendAsync(EventDataBatch, CancellationToken)" />
         ///
-        internal virtual Task SendAsync(EventData eventData,
-                                        SendEventOptions options,
-                                        CancellationToken cancellationToken = default)
+        internal virtual async Task SendAsync(EventData eventData,
+                                              SendEventOptions options,
+                                              CancellationToken cancellationToken = default)
         {
             Argument.AssertNotNull(eventData, nameof(eventData));
-            return SendAsync(new[] { eventData }, options, cancellationToken);
+            await SendAsync(new[] { eventData }, options, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -373,8 +381,8 @@ namespace Azure.Messaging.EventHubs.Producer
         ///
         /// <seealso cref="SendAsync(IEnumerable{EventData}, SendEventOptions, CancellationToken)"/>
         ///
-        internal virtual Task SendAsync(IEnumerable<EventData> events,
-                                        CancellationToken cancellationToken = default) => SendAsync(events, null, cancellationToken);
+        internal virtual async Task SendAsync(IEnumerable<EventData> events,
+                                              CancellationToken cancellationToken = default) => await SendAsync(events, null, cancellationToken).ConfigureAwait(false);
 
         /// <summary>
         ///   Sends a set of events to the associated Event Hub using a batched approach.  If the size of events exceed the
@@ -422,10 +430,20 @@ namespace Azure.Messaging.EventHubs.Producer
                 activeProducer = PartitionProducers.GetOrAdd(options.PartitionId, id => Connection.CreateTransportProducer(id, RetryPolicy));
             }
 
-            using DiagnosticScope scope = CreateDiagnosticScope();
-
             events = (events as IList<EventData>) ?? events.ToList();
             InstrumentMessages(events);
+
+            var diagnosticIdentifiers = new List<string>();
+
+            foreach (var eventData in events)
+            {
+                if (EventDataInstrumentation.TryExtractDiagnosticId(eventData, out var identifier))
+                {
+                    diagnosticIdentifiers.Add(identifier);
+                }
+            }
+
+            using DiagnosticScope scope = CreateDiagnosticScope(diagnosticIdentifiers);
 
             try
             {
@@ -480,7 +498,7 @@ namespace Azure.Messaging.EventHubs.Producer
                 activeProducer = PartitionProducers.GetOrAdd(eventBatch.SendOptions.PartitionId, id => Connection.CreateTransportProducer(id, RetryPolicy));
             }
 
-            using DiagnosticScope scope = CreateDiagnosticScope();
+            using DiagnosticScope scope = CreateDiagnosticScope(eventBatch.GetEventDiagnosticIdentifiers());
 
             try
             {
@@ -508,7 +526,7 @@ namespace Azure.Messaging.EventHubs.Producer
         ///
         /// <seealso cref="CreateBatchAsync(CreateBatchOptions, CancellationToken)" />
         ///
-        public virtual ValueTask<EventDataBatch> CreateBatchAsync(CancellationToken cancellationToken = default) => CreateBatchAsync(null, cancellationToken);
+        public virtual async ValueTask<EventDataBatch> CreateBatchAsync(CancellationToken cancellationToken = default) => await CreateBatchAsync(null, cancellationToken).ConfigureAwait(false);
 
         /// <summary>
         ///   Creates a size-constraint batch to which <see cref="EventData" /> may be added using a try-based pattern.  If an event would
@@ -533,7 +551,7 @@ namespace Azure.Messaging.EventHubs.Producer
             AssertSinglePartitionReference(options.PartitionId, options.PartitionKey);
 
             TransportEventBatch transportBatch = await EventHubProducer.CreateBatchAsync(options, cancellationToken).ConfigureAwait(false);
-            return new EventDataBatch(transportBatch, options.ToSendOptions());
+            return new EventDataBatch(transportBatch, FullyQualifiedNamespace, EventHubName, options.ToSendOptions());
         }
 
         /// <summary>
@@ -547,6 +565,12 @@ namespace Azure.Messaging.EventHubs.Producer
         public virtual async Task CloseAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested<TaskCanceledException>();
+
+            if (IsClosed)
+            {
+                return;
+            }
+
             IsClosed = true;
 
             var identifier = GetHashCode().ToString();
@@ -602,7 +626,7 @@ namespace Azure.Messaging.EventHubs.Producer
 
             if (transportProducerException != default)
             {
-                throw transportProducerException;
+                ExceptionDispatchInfo.Capture(transportProducerException).Throw();
             }
         }
 
@@ -650,15 +674,26 @@ namespace Azure.Messaging.EventHubs.Producer
         ///   events.
         /// </summary>
         ///
+        /// <param name="diagnosticIdentifiers">The set of diagnostic identifiers to which the scope will be linked.</param>
+        ///
         /// <returns>The requested <see cref="DiagnosticScope" />.</returns>
         ///
-        private DiagnosticScope CreateDiagnosticScope()
+        private DiagnosticScope CreateDiagnosticScope(IEnumerable<string> diagnosticIdentifiers)
         {
             DiagnosticScope scope = EventDataInstrumentation.ScopeFactory.CreateScope(DiagnosticProperty.ProducerActivityName);
             scope.AddAttribute(DiagnosticProperty.KindAttribute, DiagnosticProperty.ClientKind);
             scope.AddAttribute(DiagnosticProperty.ServiceContextAttribute, DiagnosticProperty.EventHubsServiceContext);
             scope.AddAttribute(DiagnosticProperty.EventHubAttribute, EventHubName);
-            scope.AddAttribute(DiagnosticProperty.EndpointAttribute, Connection.ServiceEndpoint);
+            scope.AddAttribute(DiagnosticProperty.EndpointAttribute, FullyQualifiedNamespace);
+
+            if (scope.IsEnabled)
+            {
+                foreach (var identifier in diagnosticIdentifiers)
+                {
+                    scope.AddLink(identifier);
+                }
+            }
+
             scope.Start();
 
             return scope;
@@ -674,7 +709,7 @@ namespace Azure.Messaging.EventHubs.Producer
         {
             foreach (EventData eventData in events)
             {
-                EventDataInstrumentation.InstrumentEvent(eventData);
+                EventDataInstrumentation.InstrumentEvent(eventData, FullyQualifiedNamespace, EventHubName);
             }
         }
 

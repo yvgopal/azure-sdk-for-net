@@ -44,6 +44,7 @@ namespace Azure.Messaging.EventHubs.Tests
         [Test]
         [TestCase(null)]
         [TestCase("")]
+        [TestCase("sb://test.place.com")]
         public void ConstructorValidatesTheNamespace(string constructorArgument)
         {
             var credential = new Mock<EventHubTokenCredential>(Mock.Of<TokenCredential>(), "{namespace}.servicebus.windows.net");
@@ -191,7 +192,7 @@ namespace Azure.Messaging.EventHubs.Tests
         /// </summary>
         ///
         [Test]
-        public void ProducerDelegatesForTheFullyQualifiedNamespaceName()
+        public void ProducerDelegatesForTheFullyQualifiedNamespace()
         {
             var expected = "SomeNamespace";
             var mockConnection = new MockConnection(expected);
@@ -393,7 +394,7 @@ namespace Azure.Messaging.EventHubs.Tests
         public void SendAllowsAPartitionHashKeyWithABatch()
         {
             var batchOptions = new CreateBatchOptions { PartitionKey = "testKey" };
-            var batch = new EventDataBatch(new MockTransportBatch(), batchOptions.ToSendOptions());
+            var batch = new EventDataBatch(new MockTransportBatch(), "ns", "eh", batchOptions.ToSendOptions());
             var transportProducer = new ObservableTransportProducerMock();
             var producer = new EventHubProducerClient(new MockConnection(() => transportProducer));
 
@@ -425,7 +426,7 @@ namespace Azure.Messaging.EventHubs.Tests
         public void SendForASpecificPartitionDoesNotAllowAPartitionHashKeyWithABatch()
         {
             var batchOptions = new CreateBatchOptions { PartitionKey = "testKey", PartitionId = "1" };
-            var batch = new EventDataBatch(new MockTransportBatch(), batchOptions.ToSendOptions());
+            var batch = new EventDataBatch(new MockTransportBatch(), "ns", "eh", batchOptions.ToSendOptions());
             var transportProducer = new ObservableTransportProducerMock();
             var producer = new EventHubProducerClient(new MockConnection(() => transportProducer));
 
@@ -482,7 +483,7 @@ namespace Azure.Messaging.EventHubs.Tests
         public async Task SendInvokesTheTransportProducerWithABatch()
         {
             var batchOptions = new CreateBatchOptions { PartitionKey = "testKey" };
-            var batch = new EventDataBatch(new MockTransportBatch(), batchOptions.ToSendOptions());
+            var batch = new EventDataBatch(new MockTransportBatch(), "ns", "eh", batchOptions.ToSendOptions());
             var transportProducer = new ObservableTransportProducerMock();
             var producer = new EventHubProducerClient(new MockConnection(() => transportProducer));
 
@@ -571,8 +572,8 @@ namespace Azure.Messaging.EventHubs.Tests
         public async Task CloseAsyncClosesTheTransportProducers()
         {
             var transportProducer = new ObservableTransportProducerMock();
-            var mockFirstBatch = new EventDataBatch(new MockTransportBatch(), new SendEventOptions { PartitionId = "1" });
-            var mockSecondBatch = new EventDataBatch(new MockTransportBatch(), new SendEventOptions { PartitionId = "2" });
+            var mockFirstBatch = new EventDataBatch(new MockTransportBatch(), "ns", "eh", new SendEventOptions { PartitionId = "1" });
+            var mockSecondBatch = new EventDataBatch(new MockTransportBatch(), "ns", "eh", new SendEventOptions { PartitionId = "2" });
             var producer = new EventHubProducerClient(new MockConnection(() => transportProducer));
 
             try
@@ -598,7 +599,7 @@ namespace Azure.Messaging.EventHubs.Tests
         {
             var mockTransportProducer = new Mock<TransportProducer>();
             var mockConnection = new MockConnection(() => mockTransportProducer.Object);
-            var mockBatch = new EventDataBatch(new MockTransportBatch(), new SendEventOptions { PartitionId = "1" });
+            var mockBatch = new EventDataBatch(new MockTransportBatch(), "ns", "eh", new SendEventOptions { PartitionId = "1" });
             var producer = new EventHubProducerClient(mockConnection);
 
             mockTransportProducer
@@ -743,7 +744,7 @@ namespace Azure.Messaging.EventHubs.Tests
                 return Task.FromResult(new EventHubProperties(EventHubName, DateTimeOffset.Parse("2015-10-27T00:00:00Z"), new string[] { "0", "1" }));
             }
 
-            internal async override Task<string[]> GetPartitionIdsAsync(EventHubsRetryPolicy retryPolicy,
+            internal override async Task<string[]> GetPartitionIdsAsync(EventHubsRetryPolicy retryPolicy,
                                                                         CancellationToken cancellationToken = default)
             {
                 GetPartitionIdsInvokedWith = retryPolicy;
