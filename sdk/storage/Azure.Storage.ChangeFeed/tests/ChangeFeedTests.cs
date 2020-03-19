@@ -27,29 +27,29 @@ namespace Azure.Storage.ChangeFeed.Tests
             Mock<BlobContainerClient> containerClient = new Mock<BlobContainerClient>();
             ChangeFeed changeFeed = new ChangeFeed(containerClient.Object);
 
-            //if (IsAsync)
-            //{
+            if (IsAsync)
+            {
                 AsyncPageable<BlobHierarchyItem> asyncPageable = PageResponseEnumerator.CreateAsyncEnumerable<BlobHierarchyItem>(GetYearsPathFuncAsync);
 
                 containerClient.Setup(r => r.GetBlobsByHierarchyAsync(
                     default,
                     default,
-                    Constants.ChangeFeed.SegmentPrefix,
                     "/",
+                    Constants.ChangeFeed.SegmentPrefix,
                     default)).Returns(asyncPageable);
-            //}
-            //else
-            //{
+            }
+            else
+            {
                 Pageable<BlobHierarchyItem> pageable =
                     PageResponseEnumerator.CreateEnumerable<BlobHierarchyItem>(GetYearPathFunc);
 
                 containerClient.Setup(r => r.GetBlobsByHierarchy(
                     default,
                     default,
-                    Constants.ChangeFeed.SegmentPrefix,
                     "/",
+                    Constants.ChangeFeed.SegmentPrefix,
                     default)).Returns(pageable);
-            //}
+            }
 
             // Act
             Queue<string> years = await changeFeed.GetYearPaths(IsAsync).ConfigureAwait(false);
@@ -67,13 +67,97 @@ namespace Azure.Storage.ChangeFeed.Tests
         private static Task<Page<BlobHierarchyItem>> GetYearsPathFuncAsync(string continuation, int? pageSizeHint)
             => Task.FromResult(GetYearPathFunc(continuation, pageSizeHint));
 
-        private static Page<BlobHierarchyItem> GetYearPathFunc(string continuation, int? pageSizeHint)
+        private static Page<BlobHierarchyItem> GetYearPathFunc(
+            string continuation,
+            int? pageSizeHint)
             => new BlobHierarchyItemPage(new List<BlobHierarchyItem>
             {
+                BlobsModelFactory.BlobHierarchyItem("idx/segments/1601/", null),
                 BlobsModelFactory.BlobHierarchyItem("idx/segments/2019/", null),
                 BlobsModelFactory.BlobHierarchyItem("idx/segments/2020/", null),
                 BlobsModelFactory.BlobHierarchyItem("idx/segments/2022/", null),
                 BlobsModelFactory.BlobHierarchyItem("idx/segments/2023/", null),
+            });
+
+        [Test]
+        public async Task GetSegmentsInYearTest()
+        {
+            // Arrange
+            Mock<BlobContainerClient> containerClient = new Mock<BlobContainerClient>();
+            ChangeFeed changeFeed = new ChangeFeed(containerClient.Object);
+
+            if (IsAsync)
+            {
+                AsyncPageable<BlobHierarchyItem> asyncPageable = PageResponseEnumerator.CreateAsyncEnumerable<BlobHierarchyItem>(GetSegmentsInYearFuncAsync);
+
+                containerClient.Setup(r => r.GetBlobsByHierarchyAsync(
+                    default,
+                    default,
+                    default,
+                    "idx/segments/2020/",
+                    default)).Returns(asyncPageable);
+            }
+            else
+            {
+                Pageable<BlobHierarchyItem> pageable =
+                    PageResponseEnumerator.CreateEnumerable<BlobHierarchyItem>(GetSegmentsInYearFunc);
+
+                containerClient.Setup(r => r.GetBlobsByHierarchy(
+                    default,
+                    default,
+                    default,
+                    "idx/segments/2020/",
+                    default)).Returns(pageable);
+            }
+
+            // Act
+            Queue<string> segmentPaths = await changeFeed.GetSegmentsInYear(
+                IsAsync,
+                "idx/segments/2020/",
+                startTime: new DateTimeOffset(2020, 3, 3, 0, 0, 0, TimeSpan.Zero),
+                endTime: new DateTimeOffset(2020, 3, 3, 22, 0 , 0, TimeSpan.Zero));
+
+            // Assert
+            Queue<string> expectedSegmentPaths = new Queue<string>();
+            expectedSegmentPaths.Enqueue("idx/segments/2020/03/03/0000/meta.json");
+            expectedSegmentPaths.Enqueue("idx/segments/2020/03/03/1800/meta.json");
+            expectedSegmentPaths.Enqueue("idx/segments/2020/03/03/2000/meta.json");
+            expectedSegmentPaths.Enqueue("idx/segments/2020/03/03/2200/meta.json");
+
+            Assert.AreEqual(expectedSegmentPaths, segmentPaths);
+        }
+
+        private static Task<Page<BlobHierarchyItem>> GetSegmentsInYearFuncAsync(
+            string continuation,
+            int? pageSizeHint)
+            => Task.FromResult(GetSegmentsInYearFunc(continuation, pageSizeHint));
+
+        private static Page<BlobHierarchyItem> GetSegmentsInYearFunc(
+            string continuation,
+            int? pageSizeHint)
+            => new BlobHierarchyItemPage(new List<BlobHierarchyItem>
+            {
+                BlobsModelFactory.BlobHierarchyItem(
+                    null,
+                    BlobsModelFactory.BlobItem("idx/segments/2020/01/16/2300/meta.json", false, null)),
+                BlobsModelFactory.BlobHierarchyItem(
+                    null,
+                    BlobsModelFactory.BlobItem("idx/segments/2020/03/02/2300/meta.json", false, null)),
+                BlobsModelFactory.BlobHierarchyItem(
+                    null,
+                    BlobsModelFactory.BlobItem("idx/segments/2020/03/03/0000/meta.json", false, null)),
+                BlobsModelFactory.BlobHierarchyItem(
+                    null,
+                    BlobsModelFactory.BlobItem("idx/segments/2020/03/03/1800/meta.json", false, null)),
+                BlobsModelFactory.BlobHierarchyItem(
+                    null,
+                    BlobsModelFactory.BlobItem("idx/segments/2020/03/03/2000/meta.json", false, null)),
+                BlobsModelFactory.BlobHierarchyItem(
+                    null,
+                    BlobsModelFactory.BlobItem("idx/segments/2020/03/03/2200/meta.json", false, null)),
+                BlobsModelFactory.BlobHierarchyItem(
+                    null,
+                    BlobsModelFactory.BlobItem("idx/segments/2020/03/05/1700/meta.json", false, null)),
             });
 
         private class BlobHierarchyItemPage : Page<BlobHierarchyItem>
@@ -87,7 +171,7 @@ namespace Azure.Storage.ChangeFeed.Tests
 
             public override IReadOnlyList<BlobHierarchyItem> Values => _items;
 
-            public override string ContinuationToken => throw new NotImplementedException();
+            public override string ContinuationToken => null;
 
             public override Response GetRawResponse()
             {

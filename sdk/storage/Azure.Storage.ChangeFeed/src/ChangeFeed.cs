@@ -268,6 +268,8 @@ namespace Azure.Storage.ChangeFeed
             {
                 return true;
             }
+
+            // We have no more segments, years, and the current segment doesn't have hext.
             if (_segments.Count == 0 && _years.Count == 0  && !_currentSegment.HasNext())
             {
                 return false;
@@ -290,7 +292,7 @@ namespace Azure.Storage.ChangeFeed
                 endDateTime: _endTime,
                 currentSegmentCursor: _currentSegment.GetCursor());
 
-        private async Task<Queue<string>> GetSegmentsInYear(
+        internal async Task<Queue<string>> GetSegmentsInYear(
             bool async,
             string yearPath,
             DateTimeOffset? startTime = default,
