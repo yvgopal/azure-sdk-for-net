@@ -21,6 +21,7 @@ namespace Azure.Storage.Internal.Avro
         {
             _stream = stream;
             _reader = new BinaryReader(stream);
+            _metadata = new Dictionary<string, byte[]>();
         }
 
         public async Task Initalized(bool async)

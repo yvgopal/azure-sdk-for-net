@@ -7,6 +7,45 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\AsyncGate.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\AsyncOnlyAttribute.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\AsyncValidatingStream.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\ClientDiagnosticListener.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\ClientTestBase.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\ClientTestFixtureAttribute.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\DiagnosticScopeValidatingInterceptor.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\EnumValuesAttribute.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\LiveOnlyAttribute.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\MockRequest.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\MockResponse.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\MockTransport.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\NonSeekableMemoryStream.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\PlaybackTransport.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\RandomExtensions.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\RecordedTestBase.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\RecordedTestMode.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\RecordedTestSanitizer.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\RecordedTestUtilities.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\RecordEntry.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\RecordEntryMessage.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\RecordMatcher.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\RecordSession.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\RecordTransport.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\RunOnlyOnPlatformsAttribute.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\ServiceVersionAttribute.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\SyncAsyncPolicyTestBase.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\SyncAsyncTestBase.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\TaskExtensions.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\TestAsyncEnumerableExtensions.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\TestDiagnosticListener.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\TestEventListener.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\TestEventListenerExtensions.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\TestRandom.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\TestRecording.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\TestRetryHelper.cs" />
+    <Compile Remove="C:\Users\Sean\git\azure-sdk-for-net\sdk\core\Azure.Core\tests\TestFramework\UseSyncMethodsInterceptor.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\src\Azure.Storage.Internal.Avro.csproj" />
   </ItemGroup>
 </Project>

@@ -103,10 +103,10 @@ namespace Azure.Storage.Internal.Avro
             return (-(value & 0x01L)) ^ ((value >> 1) & 0x7fffffffffffffffL);
         }
 
-        private object ParseNull() => null;
+        //private object ParseNull() => null;
 
-        private Task<object> ParseNullAsync()
-            => Task.FromResult(ParseNull());
+        //private Task<object> ParseNullAsync()
+        //    => Task.FromResult(ParseNull());
 
         private bool ParseBool() => ReadByte() != 0;
 
