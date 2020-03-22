@@ -78,9 +78,10 @@ namespace Azure.Storage.Blobs.ChangeFeed
 
         public ChangeFeed(
             BlobServiceClient blobServiceClient,
-            BlobChangeFeedCursor cursor)
+            string continutation)
         {
             _containerClient = blobServiceClient.GetBlobContainerClient(Constants.ChangeFeed.ChangeFeedContainerName);
+            BlobChangeFeedCursor cursor = JsonSerializer.Deserialize<BlobChangeFeedCursor>(continutation);
             ValidateCursor(_containerClient, cursor);
             _years = new Queue<string>();
             _segments = new Queue<string>();
@@ -258,7 +259,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
                 }
             }
 
-            return new BlobChangeFeedEventPage(blobChangeFeedEvents);
+            return new BlobChangeFeedEventPage(blobChangeFeedEvents, JsonSerializer.Serialize<BlobChangeFeedCursor>(GetCursor()));
         }
 
 
@@ -287,7 +288,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
             return _lastConsumable;
         }
 
-        public BlobChangeFeedCursor GetCursor()
+        internal BlobChangeFeedCursor GetCursor()
             => new BlobChangeFeedCursor(
                 urlHash: _containerClient.Uri.ToString().GetHashCode(),
                 endDateTime: _endTime,

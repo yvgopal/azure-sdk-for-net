@@ -53,10 +53,10 @@ namespace Azure.Storage.Blobs.ChangeFeed.Tests
 
             Console.WriteLine("break");
 
-            BlobChangeFeedCursor cursor = blobChangeFeedAsyncPagable.GetCursor();
+            string continuation = page.ContinuationToken;
 
             BlobChangeFeedAsyncPagable cursorBlobChangeFeedAsyncPagable
-                = blobChangeFeedClient.GetChangesAsync(cursor);
+                = blobChangeFeedClient.GetChangesAsync(continuation);
 
             IList<BlobChangeFeedEvent> list = await cursorBlobChangeFeedAsyncPagable.ToListAsync();
             foreach (BlobChangeFeedEvent e in list)

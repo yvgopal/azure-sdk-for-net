@@ -43,15 +43,15 @@ namespace Azure.Storage.Blobs.ChangeFeed
         /// <summary>
         /// GetChanges.
         /// </summary>
-        /// <param name="cursor"></param>
+        /// <param name="continuation"></param>
         /// <returns><see cref="BlobChangeFeedPagable"/>.</returns>
 #pragma warning disable AZC0002 // DO ensure all service methods, both asynchronous and synchronous, take an optional CancellationToken parameter called cancellationToken.
-        public virtual BlobChangeFeedPagable GetChanges(BlobChangeFeedCursor cursor)
+        public virtual BlobChangeFeedPagable GetChanges(string continuation)
 #pragma warning restore AZC0002 // DO ensure all service methods, both asynchronous and synchronous, take an optional CancellationToken parameter called cancellationToken.
         {
             BlobChangeFeedPagable pageable = new BlobChangeFeedPagable(
                 _blobServiceClient,
-                cursor);
+                continuation);
             return pageable;
         }
 
@@ -87,14 +87,14 @@ namespace Azure.Storage.Blobs.ChangeFeed
         /// <summary>
         /// GetChangesAsync.
         /// </summary>
-        /// <param name="cursor"></param>
+        /// <param name="continuation"></param>
         /// <returns><see cref="BlobChangeFeedAsyncPagable"/>.</returns>
 #pragma warning disable AZC0002 // DO ensure all service methods, both asynchronous and synchronous, take an optional CancellationToken parameter called cancellationToken.
-        public virtual BlobChangeFeedAsyncPagable GetChangesAsync(BlobChangeFeedCursor cursor)
+        public virtual BlobChangeFeedAsyncPagable GetChangesAsync(string continuation)
 #pragma warning restore AZC0002 // DO ensure all service methods, both asynchronous and synchronous, take an optional CancellationToken parameter called cancellationToken.
         {
             BlobChangeFeedAsyncPagable asyncPagable = new BlobChangeFeedAsyncPagable(_blobServiceClient,
-                cursor);
+                continuation);
             return asyncPagable;
         }
 

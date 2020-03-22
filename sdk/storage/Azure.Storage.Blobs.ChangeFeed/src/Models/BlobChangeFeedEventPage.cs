@@ -17,9 +17,10 @@ namespace Azure.Storage.Blobs.ChangeFeed.Models
 
         public BlobChangeFeedEventPage() { }
 
-        public BlobChangeFeedEventPage(List<BlobChangeFeedEvent> events)
+        public BlobChangeFeedEventPage(List<BlobChangeFeedEvent> events, string continuationToken)
         {
             Values = events;
+            ContinuationToken = continuationToken;
         }
 
         public BlobChangeFeedEventPage(Response raw, List<GenericRecord> data)

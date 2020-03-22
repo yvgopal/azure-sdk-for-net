@@ -40,11 +40,11 @@ namespace Azure.Storage.Blobs.ChangeFeed
 
         internal BlobChangeFeedAsyncPagable(
             BlobServiceClient blobServiceClient,
-            BlobChangeFeedCursor cursor)
+            string continuation)
         {
             _changeFeed = new ChangeFeed(
                 blobServiceClient,
-                cursor);
+                continuation);
         }
 
         /// <summary>
@@ -64,12 +64,5 @@ namespace Azure.Storage.Blobs.ChangeFeed
                     pageSize: pageSizeHint ?? 512).ConfigureAwait(false);
             }
         }
-
-        /// <summary>
-        /// Gets the Cursor to resume from the current position.
-        /// </summary>
-        /// <returns></returns>
-        public BlobChangeFeedCursor GetCursor()
-            => _changeFeed.GetCursor();
     }
 }
