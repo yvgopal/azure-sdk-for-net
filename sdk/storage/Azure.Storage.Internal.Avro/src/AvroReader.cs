@@ -7,95 +7,184 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Parser = System.Func<Azure.Storage.Internal.Avro.AvroParser, object>;
+using AsyncParser = System.Func<Azure.Storage.Internal.Avro.AvroParser, System.Threading.Tasks.Task<object>>;
+using System.Text.Json;
+using Azure.Core.Pipeline;
 
 namespace Azure.Storage.Internal.Avro
 {
     internal class AvroReader
     {
         private Stream _stream;
-        private BinaryReader _reader;
+        private AvroParser _parser;
+        private Parser _parserFunction;
+        private AsyncParser _asyncParserFunction;
         private byte[] _syncMarker;
-        private Dictionary<string, byte[]> _metadata;
+        private Dictionary<string, string> _metadata;
+        private long _itemsRemainingInCurrentBlock;
+        private bool _initalized;
 
         public AvroReader(Stream stream)
         {
             _stream = stream;
-            _reader = new BinaryReader(stream);
-            _metadata = new Dictionary<string, byte[]>();
+            _parser = new AvroParser(stream);
+            _metadata = new Dictionary<string, string>();
+            _initalized = false;
         }
 
-        public async Task Initalized(bool async)
+        private async Task Initalize(bool async)
         {
             // Get and validate initBytes
             byte[] initBytes;
 
             if (async)
             {
-                initBytes = await _reader.ReadBytesAsync(Constants.InitBytesLength).ConfigureAwait(false);
+                initBytes = await _parser.ReadBytesAsync(AvroConstants.InitBytesLength).ConfigureAwait(false);
             }
             else
             {
-                initBytes = _reader.ReadBytes(Constants.InitBytesLength);
+                initBytes = _parser.ReadBytes(AvroConstants.InitBytesLength);
             }
 
-            if (!initBytes.SequenceEqual(Constants.InitBytes))
+            if (!initBytes.SequenceEqual(AvroConstants.InitBytes))
             {
                 throw new ArgumentException("Stream is not an Avro file.");
             }
 
-            // Read metadata
-            long length;
-
+            // Get metadata
             if (async)
             {
-                length = await _reader.ParseItemCountAsync().ConfigureAwait(false);
+                _metadata = await _parser.ParseMapAsync<string>(async (p) =>
+                    await p.ParseStringAsync().ConfigureAwait(false)).ConfigureAwait(false);
             }
             else
             {
-                length = _reader.ParseItemCount();
-            }
-
-            if (length > 0)
-            {
-                if (async)
-                {
-                    do
-                    {
-                        for (int i = 0; i < length; i++)
-                        {
-                            string key = await _reader.ParseStringAsync().ConfigureAwait(false);
-                            byte[] value = await _reader.ParseBytesAsync().ConfigureAwait(false);
-                            _metadata.Add(key, value);
-                        }
-                        length = await _reader.ParseItemCountAsync().ConfigureAwait(false);
-                    }
-                    while (length != 0);
-                }
-                else
-                {
-                    do
-                    {
-                        for (int i = 0; i < length; i++)
-                        {
-                            string key = _reader.ParseString();
-                            byte[] value = _reader.ParseBytes();
-                            _metadata.Add(key, value);
-                        }
-                        length = _reader.ParseItemCount();
-                    }
-                    while (length != 0);
-                }
+                _metadata = _parser.ParseMap<string>(p => p.ParseString());
             }
 
             // Get sync marker
             if (async)
             {
-                _syncMarker = await _reader.ReadBytesAsync(Constants.SyncMarkerSize).ConfigureAwait(false);
+                _syncMarker = await _parser.ReadBytesAsync(AvroConstants.SyncMarkerSize).ConfigureAwait(false);
             }
             else
             {
-                _syncMarker = _reader.ReadBytes(Constants.SyncMarkerSize);
+                _syncMarker = _parser.ReadBytes(AvroConstants.SyncMarkerSize);
             }
+
+            // Validate codec
+            _metadata.TryGetValue(AvroConstants.CodecKey, out string codec);
+
+            if (codec == AvroConstants.DeflateCodec)
+            {
+                throw new ArgumentException("Deflate codec is not supported");
+            }
+
+            // Build parser functions
+            using JsonDocument schema = JsonDocument.Parse(_metadata[AvroConstants.SchemaKey]);
+
+            if (async)
+            {
+                _asyncParserFunction = _parser.BuildAsyncParser(schema.RootElement);
+            }
+            else
+            {
+                _parserFunction = _parser.BuildParser(schema.RootElement);
+            }
+
+            // Populate _itemsRemainingInCurrentBlock
+            if (async)
+            {
+                _itemsRemainingInCurrentBlock = await _parser.ParseLongAsync().ConfigureAwait(false);
+                // skip block length
+                await _parser.ParseLongAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                _itemsRemainingInCurrentBlock = _parser.ParseLong();
+                // skip block length
+                _parser.ParseLong();
+            }
+            _initalized = true;
+        }
+
+        public async Task<object> Next(bool async)
+        {
+            // Initalize AvroReader, if necessary.
+            if (!_initalized)
+            {
+                if (async)
+                {
+                    await Initalize(async: true).ConfigureAwait(false);
+                }
+                else
+                {
+                    Initalize(async: false).EnsureCompleted();
+                }
+            }
+
+            if (!HasNext())
+            {
+                throw new ArgumentException("There are no more items in the stream");
+            }
+
+            object result;
+
+            if (async)
+            {
+                result = _asyncParserFunction(_parser);
+                _itemsRemainingInCurrentBlock--;
+
+                if (_itemsRemainingInCurrentBlock == 0)
+                {
+                    // Skip sync marker
+                    await _parser.ReadBytesAsync(16).ConfigureAwait(false);
+
+                    if (_stream.Position < _stream.Length)
+                    {
+                        _itemsRemainingInCurrentBlock = await _parser.ParseLongAsync().ConfigureAwait(false);
+                        // Ignore block size
+                        await _parser.ParseLongAsync().ConfigureAwait(false);
+                    }
+                }
+            }
+            else
+            {
+                result = _parserFunction(_parser);
+                _itemsRemainingInCurrentBlock--;
+
+                if (_itemsRemainingInCurrentBlock == 0)
+                {
+                    // Skip sync marker
+                    _parser.ReadBytes(16);
+
+                    if (_stream.Position < _stream.Length)
+                    {
+                        _itemsRemainingInCurrentBlock = _parser.ParseLong();
+                        // Ignore block size
+                        _parser.ParseLong();
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        public bool HasNext()
+        {
+            if (!_initalized)
+            {
+                return true;
+            }
+
+            if (_itemsRemainingInCurrentBlock > 0)
+            {
+                return true;
+            }
+
+            // TODO this might not work.
+            return _stream.Position < _stream.Length;
         }
     }
 }

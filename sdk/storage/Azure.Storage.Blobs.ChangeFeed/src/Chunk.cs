@@ -65,6 +65,12 @@ namespace Azure.Storage.Blobs.ChangeFeed
             {
                 blobDownloadInfo = _blobClient.Download();
             }
+
+            //var fileStream = File.Create($"C:\\Users\\Sean\\Desktop\\avro\\test.avro");
+            ////blobDownloadInfo.Content.Seek(0, SeekOrigin.Begin);
+            //blobDownloadInfo.Content.CopyTo(fileStream);
+            //fileStream.Close();
+
             _isInitialized = true;
             _avroReader = DataFileReader<GenericRecord>.OpenReader(blobDownloadInfo.Content);
 
