@@ -2,20 +2,22 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.AI.FormRecognizer.Models;
 using Azure.Core;
 using Azure.Core.Pipeline;
 
-namespace Azure.AI.FormRecognizer.Models
+namespace Azure.AI.FormRecognizer.Custom
 {
     /// <summary>
     /// </summary>
-    internal class ExtractFormOperation : Operation<ExtractedForm>
+    internal class ExtractPagesOperation : Operation<IReadOnlyList<ExtractedPage>>
     {
         private Response _response;
-        private ExtractedForm _value;
+        private IReadOnlyList<ExtractedPage> _value;
         private bool _hasCompleted;
 
         private readonly string _modelId;
@@ -23,7 +25,7 @@ namespace Azure.AI.FormRecognizer.Models
 
         public override string Id { get; }
 
-        public override ExtractedForm Value => OperationHelpers.GetValue(ref _value);
+        public override IReadOnlyList<ExtractedPage> Value => OperationHelpers.GetValue(ref _value);
 
         public override bool HasCompleted => _hasCompleted;
 
@@ -33,11 +35,11 @@ namespace Azure.AI.FormRecognizer.Models
         public override Response GetRawResponse() => _response;
 
         /// <inheritdoc/>
-        public override ValueTask<Response<ExtractedForm>> WaitForCompletionAsync(CancellationToken cancellationToken = default) =>
+        public override ValueTask<Response<IReadOnlyList<ExtractedPage>>> WaitForCompletionAsync(CancellationToken cancellationToken = default) =>
             this.DefaultWaitForCompletionAsync(cancellationToken);
 
         /// <inheritdoc/>
-        public override ValueTask<Response<ExtractedForm>> WaitForCompletionAsync(TimeSpan pollingInterval, CancellationToken cancellationToken = default) =>
+        public override ValueTask<Response<IReadOnlyList<ExtractedPage>>> WaitForCompletionAsync(TimeSpan pollingInterval, CancellationToken cancellationToken = default) =>
             this.DefaultWaitForCompletionAsync(pollingInterval, cancellationToken);
 
         /// <summary>
@@ -45,7 +47,7 @@ namespace Azure.AI.FormRecognizer.Models
         /// <param name="operations"></param>
         /// <param name="modelId"></param>
         /// <param name="operationLocation"></param>
-        internal ExtractFormOperation(ServiceClient operations, string modelId, string operationLocation)
+        internal ExtractPagesOperation(ServiceClient operations, string modelId, string operationLocation)
         {
             _operations = operations;
             _modelId = modelId;
@@ -63,7 +65,7 @@ namespace Azure.AI.FormRecognizer.Models
         public override async ValueTask<Response> UpdateStatusAsync(CancellationToken cancellationToken = default) =>
             await UpdateStatusAsync(true, cancellationToken).ConfigureAwait(false);
 
-        private async Task<Response> UpdateStatusAsync(bool async, CancellationToken cancellationToken)
+        private async ValueTask<Response> UpdateStatusAsync(bool async, CancellationToken cancellationToken)
         {
             if (!_hasCompleted)
             {
@@ -78,27 +80,23 @@ namespace Azure.AI.FormRecognizer.Models
                 if (update.Value.Status == OperationStatus.Succeeded || update.Value.Status == OperationStatus.Failed)
                 {
                     _hasCompleted = true;
-
-                    // TODO: Move this logic into ExtractedForm?  It's a bit convoluted right now.
-                    // Determine if the model was supervised or unsupervised
-                    if (update.Value.AnalyzeResult.DocumentResults?.Count == 0)
-                    {
-                        // Unsupervised
-                        _value = new ExtractedForm(update.Value.AnalyzeResult.PageResults, update.Value.AnalyzeResult.ReadResults);
-                    }
-                    else
-                    {
-                        // TODO: Consider what we'll do when there are multiple DocumentResults
-                        // https://github.com/Azure/azure-sdk-for-net/issues/10387
-                        // Supervised
-                        _value = new ExtractedForm(update.Value.AnalyzeResult.DocumentResults.First(), update.Value.AnalyzeResult.PageResults, update.Value.AnalyzeResult.ReadResults);
-                    }
+                    _value = ConvertToExtractedPages(update.Value.AnalyzeResult.PageResults, update.Value.AnalyzeResult.ReadResults);
                 }
 
                 _response = update.GetRawResponse();
             }
 
             return GetRawResponse();
+        }
+
+        private static IReadOnlyList<ExtractedPage> ConvertToExtractedPages(IReadOnlyList<PageResult_internal> pageResults, IReadOnlyList<ReadResult_internal> readResults)
+        {
+            List<ExtractedPage> pages = new List<ExtractedPage>();
+            for (int i = 0; i < pageResults.Count; i++)
+            {
+                pages.Add(new ExtractedPage(pageResults[i], readResults[i]));
+            }
+            return pages;
         }
     }
 }
