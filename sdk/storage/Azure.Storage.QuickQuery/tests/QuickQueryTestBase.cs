@@ -24,7 +24,7 @@ namespace Azure.Storage.QuickQuery.Tests
         public QuickQueryTestBase(bool async) : this(async, null) { }
 
         public QuickQueryTestBase(bool async, RecordedTestMode? mode = null)
-            : base(async, mode)
+            : base(async, RecordedTestMode.Live)
         {
         }
 

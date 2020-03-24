@@ -2,9 +2,10 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
-using Avro.File;
-using Avro.Generic;
+using Azure.Core.Pipeline;
+using Azure.Storage.Internal.Avro;
 using Azure.Storage.QuickQuery.Models;
 
 namespace Azure.Storage.QuickQuery
@@ -15,7 +16,7 @@ namespace Azure.Storage.QuickQuery
     internal class BlobQuickQueryStream : Stream
     {
         internal Stream _avroStream;
-        internal IFileReader<GenericRecord> _avroReader;
+        internal AvroReader _avroReader;
         internal byte[] _buffer;
         internal int _bufferOffset;
         internal int _bufferLength;
@@ -28,7 +29,7 @@ namespace Azure.Storage.QuickQuery
             IBlobQueryErrorReceiver nonFatalErrorHandler = default)
         {
             _avroStream = avroStream;
-            _avroReader = DataFileReader<GenericRecord>.OpenReader(_avroStream);
+            _avroReader = new AvroReader(_avroStream);
             //TODO may need to revisit this.
             _buffer = new byte[4 * Constants.MB];
             _bufferOffset = 0;
@@ -114,9 +115,9 @@ namespace Azure.Storage.QuickQuery
             {
                 // Get next Record.
                 //TODO in the future, this is where we will call the async version of this.
-                GenericRecord record = _avroReader.Next();
+                Dictionary<string, object> record = _avroReader.Next(async: false).EnsureCompleted();
 
-                switch (record.Schema.Fullname)
+                switch (record["$schemaName"])
                 {
                     // Data Record
                     case Constants.QuickQuery.DataRecordName:
@@ -185,7 +186,6 @@ namespace Azure.Storage.QuickQuery
         protected override void Dispose(bool disposing)
         {
             _avroStream.Dispose();
-            _avroReader.Dispose();
         }
 
         internal static void ValidateReadParameters(byte[] buffer, int offset, int count)
@@ -211,7 +211,7 @@ namespace Azure.Storage.QuickQuery
             }
         }
 
-        internal void ProcessErrorRecord(GenericRecord record)
+        internal void ProcessErrorRecord(Dictionary<string, object> record)
         {
             record.TryGetValue(Constants.QuickQuery.Fatal, out object fatal);
             record.TryGetValue(Constants.QuickQuery.Name, out object name);
@@ -222,7 +222,7 @@ namespace Azure.Storage.QuickQuery
             {
                 BlobQueryError blobQueryError = new BlobQueryError
                 {
-                    IsFatal = false,
+                    IsFatal = (bool)fatal,
                     Name = (string)name,
                     Description = (string)description,
                     Position = (long)position

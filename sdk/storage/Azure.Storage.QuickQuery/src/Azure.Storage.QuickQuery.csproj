@@ -14,7 +14,6 @@
     <EnableApiCompat>false</EnableApiCompat>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Apache.Avro" />
     <PackageReference Include="System.Text.Json" />
   </ItemGroup>
   <ItemGroup>
@@ -42,5 +41,8 @@
     <Compile Include="$(AzureStorageSharedSources)StorageVersionExtensions.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
     <Compile Include="$(AzureStorageSharedSources)StorageSharedKeyCredentialInternals.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
     <Compile Include="$(AzureStorageSharedSources)UriQueryParamsCollection.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
+    <Compile Include="$(MSBuildThisFileDirectory)\..\..\Azure.Storage.Internal.Avro\src\AvroParser.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
+    <Compile Include="$(MSBuildThisFileDirectory)\..\..\Azure.Storage.Internal.Avro\src\AvroConstants.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
+    <Compile Include="$(MSBuildThisFileDirectory)\..\..\Azure.Storage.Internal.Avro\src\AvroReader.cs" Link="Shared\%(RecursiveDir)\%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

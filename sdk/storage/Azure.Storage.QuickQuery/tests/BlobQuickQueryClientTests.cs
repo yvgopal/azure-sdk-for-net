@@ -27,7 +27,7 @@ namespace Azure.Storage.QuickQuery.Tests
         public DateTimeOffset NewDate => Recording.Now.AddDays(1);
 
         [Test]
-        [Ignore("Recording framework doesn't play nicely with Avro")]
+        //[Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_Min()
         {
             // Arrange
@@ -49,7 +49,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
-        [Ignore("Recording framework doesn't play nicely with Avro")]
+        //[Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_Snapshot()
         {
             // Arrange
@@ -73,7 +73,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
-        [Ignore("Recording framework doesn't play nicely with Avro")]
+        //[Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_Error()
         {
             // Arrange
@@ -93,7 +93,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
-        [Ignore("Don't want to record 16 MB of data.")]
+        //[Ignore("Don't want to record 16 MB of data.")]
         public async Task QueryAsync_MultipleDataRecords()
         {
             // Arrange
@@ -132,7 +132,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
-        [Ignore("Don't want to record 120 MB of data.")]
+        //[Ignore("Don't want to record 120 MB of data.")]
         public async Task QueryAsync_Large()
         {
             // Arrange
@@ -163,7 +163,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
-        [Ignore("Recording framework doesn't play nicely with Avro")]
+        //[Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_Progress()
         {
             // Arrange
@@ -190,7 +190,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
-        [Ignore("Recording framework doesn't play nicely with Avro")]
+        //[Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_QueryTextConfigurations()
         {
             await using DisposingContainer test = await GetTestContainerAsync();
@@ -230,7 +230,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
-        [Ignore("Recording framework doesn't play nicely with Avro")]
+        //[Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_NonFatalError()
         {
             // Arrange
@@ -255,7 +255,7 @@ namespace Azure.Storage.QuickQuery.Tests
             {
                 IsFatal = false,
                 Name = "InvalidTypeConversion",
-                Description = "Invalid type conversion",
+                Description = "Invalid type conversion.",
                 Position = 0
             };
 
@@ -267,7 +267,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
-        [Ignore("Recording framework doesn't play nicely with Avro")]
+        //[Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_FatalError()
         {
             // Arrange
@@ -309,7 +309,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
-        [Ignore("Recording framework doesn't play nicely with Avro")]
+        //[Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_AccessConditions()
         {
             var garbageLeaseId = GetGarbageLeaseId();
@@ -341,7 +341,7 @@ namespace Azure.Storage.QuickQuery.Tests
         }
 
         [Test]
-        [Ignore("Recording framework doesn't play nicely with Avro")]
+        //[Ignore("Recording framework doesn't play nicely with Avro")]
         public async Task QueryAsync_AccessConditionsFail()
         {
             var garbageLeaseId = GetGarbageLeaseId();
@@ -448,7 +448,7 @@ namespace Azure.Storage.QuickQuery.Tests
 
             public void ReportError(BlobQueryError blobQueryError)
             {
-                Assert.IsFalse(blobQueryError.IsFatal);
+                Assert.AreEqual(_expectedBlobQueryError.IsFatal, blobQueryError.IsFatal);
                 Assert.AreEqual(_expectedBlobQueryError.Name, blobQueryError.Name);
                 Assert.AreEqual(_expectedBlobQueryError.Description, blobQueryError.Description);
                 Assert.AreEqual(_expectedBlobQueryError.Position, blobQueryError.Position);

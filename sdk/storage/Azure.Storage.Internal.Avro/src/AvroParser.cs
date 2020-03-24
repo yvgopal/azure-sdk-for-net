@@ -288,9 +288,11 @@ namespace Azure.Storage.Internal.Avro
                                         f => new KeyValuePair<string, Parser>(
                                             f.GetProperty("name").GetString(),
                                             BuildParser(f.GetProperty("type")))).ToDictionary(p => p.Key, p => p.Value);
+                                    var name = schema.GetProperty("name").GetString();
                                     return (Parser)(p =>
                                     {
                                         Dictionary<string, object> record = new Dictionary<string, object>();
+                                        record["$schemaName"] = name;
                                         foreach (KeyValuePair<string, Parser> field in fields)
                                         {
                                             record[field.Key] = field.Value(p);

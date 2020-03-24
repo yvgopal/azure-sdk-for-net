@@ -7,8 +7,6 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Avro.File;
-using Avro.Generic;
 using Azure.Core;
 using Azure.Core.Pipeline;
 using Azure.Storage.Blobs;

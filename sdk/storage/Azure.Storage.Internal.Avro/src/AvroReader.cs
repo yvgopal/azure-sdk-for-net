@@ -141,7 +141,14 @@ namespace Azure.Storage.Internal.Avro
                     // Skip sync marker
                     await _parser.ReadBytesAsync(16).ConfigureAwait(false);
 
-                    _itemsRemainingInCurrentBlock = await _parser.ParseLongAsync().ConfigureAwait(false);
+                    try
+                    {
+                        _itemsRemainingInCurrentBlock = await _parser.ParseLongAsync().ConfigureAwait(false);
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // We hit the end of the stream.
+                    }
 
                     if (_itemsRemainingInCurrentBlock > 0)
                     {
@@ -160,7 +167,14 @@ namespace Azure.Storage.Internal.Avro
                     // Skip sync marker
                     _parser.ReadBytes(16);
 
-                    _itemsRemainingInCurrentBlock = _parser.ParseLong();
+                    try
+                    {
+                        _itemsRemainingInCurrentBlock = _parser.ParseLong();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // We hit the end of the stream.
+                    }
 
                     if (_itemsRemainingInCurrentBlock > 0)
                     {

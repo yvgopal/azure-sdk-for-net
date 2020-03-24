@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Avro.Generic;
 using Azure.Core.Testing;
 using Azure.Storage.QuickQuery.Models;
 using Azure.Storage.Test;
