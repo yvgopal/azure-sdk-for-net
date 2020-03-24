@@ -32,7 +32,7 @@ namespace Azure.Storage.Blobs.ChangeFeed.Tests
             IList<BlobChangeFeedEvent> list = await blobChangeFeedAsyncPagable.ToListAsync();
             foreach (BlobChangeFeedEvent e in list)
             {
-                Console.WriteLine(e.Id);
+                Console.WriteLine(e);
             }
         }
 

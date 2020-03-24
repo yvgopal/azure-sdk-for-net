@@ -42,16 +42,26 @@ namespace Azure.Storage.Internal.Avro
         public byte[] ReadBytes(int length)
         {
             byte[] data = new byte[length];
-            for (int read = 0; read < length; read = _stream.Read(data, read, length))
-            { }
+            int start = 0;
+            while (length > 0)
+            {
+                int n = _stream.Read(data, start, length);
+                start += n;
+                length -= n;
+            }
             return data;
         }
 
         public async Task<byte[]> ReadBytesAsync(int length)
         {
             byte[] data = new byte[length];
-            for (int read = 0; read < length; read = await _stream.ReadAsync(data, read, length).ConfigureAwait(false))
-            { }
+            int start = 0;
+            while (length > 0)
+            {
+                int n = await _stream.ReadAsync(data, start, length).ConfigureAwait(false);
+                start += n;
+                length -= n;
+            }
             return data;
         }
 
@@ -196,11 +206,17 @@ namespace Azure.Storage.Internal.Avro
             return await ReadBytesAsync(length).ConfigureAwait(false);
         }
 
-        public string ParseString() => Encoding.UTF8.GetString(ParseBytes());
+        public string ParseString()
+        {
+            int length = ParseInt();
+            byte[] bytes = ReadBytes(length);
+            return Encoding.UTF8.GetString(bytes);
+        }
 
         public async Task<string> ParseStringAsync()
         {
-            byte[] bytes = await ParseBytesAsync().ConfigureAwait(false);
+            int length = await ParseIntAsync().ConfigureAwait(false);
+            byte[] bytes = await ReadBytesAsync(length).ConfigureAwait(false);
             return Encoding.UTF8.GetString(bytes);
         }
 

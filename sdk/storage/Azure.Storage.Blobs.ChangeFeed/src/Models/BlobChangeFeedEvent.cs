@@ -74,6 +74,9 @@ namespace Azure.Storage.Blobs.ChangeFeed.Models
         /// </summary>
         public string MetadataVersion { get; internal set; }
 
+        /// <inheritdoc/>
+        public override string ToString() => $"{EventTime}: {EventType} {Subject} ({EventData?.ToString() ?? "Unknown Event"})";
+
         private static BlobChangeFeedEventType ToBlobChangeFeedEventType(string s)
         {
             switch (s)

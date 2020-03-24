@@ -141,9 +141,10 @@ namespace Azure.Storage.Internal.Avro
                     // Skip sync marker
                     await _parser.ReadBytesAsync(16).ConfigureAwait(false);
 
-                    if (_stream.Position < _stream.Length)
+                    _itemsRemainingInCurrentBlock = await _parser.ParseLongAsync().ConfigureAwait(false);
+
+                    if (_itemsRemainingInCurrentBlock > 0)
                     {
-                        _itemsRemainingInCurrentBlock = await _parser.ParseLongAsync().ConfigureAwait(false);
                         // Ignore block size
                         await _parser.ParseLongAsync().ConfigureAwait(false);
                     }
@@ -159,9 +160,10 @@ namespace Azure.Storage.Internal.Avro
                     // Skip sync marker
                     _parser.ReadBytes(16);
 
-                    if (_stream.Position < _stream.Length)
+                    _itemsRemainingInCurrentBlock = _parser.ParseLong();
+
+                    if (_itemsRemainingInCurrentBlock > 0)
                     {
-                        _itemsRemainingInCurrentBlock = _parser.ParseLong();
                         // Ignore block size
                         _parser.ParseLong();
                     }
@@ -174,8 +176,7 @@ namespace Azure.Storage.Internal.Avro
         public bool HasNext()
         {
             if (!_initalized
-                || _itemsRemainingInCurrentBlock > 0
-                || _stream.Position < _stream.Length)
+                || _itemsRemainingInCurrentBlock > 0)
             {
                 return true;
             }
