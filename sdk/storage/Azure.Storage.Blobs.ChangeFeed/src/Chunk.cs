@@ -112,7 +112,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
                 }
             }
 
-            object result;
+            Dictionary<string, object> result;
 
             if (!HasNext())
             {
@@ -129,7 +129,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
             }
 
             EventIndex++;
-            return new BlobChangeFeedEvent((Dictionary<string, object>)result);
+            return new BlobChangeFeedEvent(result);
         }
     }
 }

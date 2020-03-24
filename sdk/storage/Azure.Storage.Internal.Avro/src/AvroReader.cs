@@ -109,7 +109,7 @@ namespace Azure.Storage.Internal.Avro
             _initalized = true;
         }
 
-        public async Task<object> Next(bool async)
+        public async Task<Dictionary<string, object>> Next(bool async)
         {
             // Initalize AvroReader, if necessary.
             if (!_initalized)
@@ -170,7 +170,7 @@ namespace Azure.Storage.Internal.Avro
                 }
             }
 
-            return result;
+            return (Dictionary<string, object>)result;
         }
 
         public bool HasNext()
