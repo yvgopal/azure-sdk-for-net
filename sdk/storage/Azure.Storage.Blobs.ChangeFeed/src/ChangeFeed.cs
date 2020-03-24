@@ -7,7 +7,6 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Avro.Util;
 using Azure.Core.Pipeline;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;

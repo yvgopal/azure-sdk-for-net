@@ -133,7 +133,7 @@ namespace Azure.Storage.Internal.Avro
 
             if (async)
             {
-                result = _asyncParserFunction(_parser);
+                result = await _asyncParserFunction(_parser).ConfigureAwait(false);
                 _itemsRemainingInCurrentBlock--;
 
                 if (_itemsRemainingInCurrentBlock == 0)
@@ -173,18 +173,14 @@ namespace Azure.Storage.Internal.Avro
 
         public bool HasNext()
         {
-            if (!_initalized)
+            if (!_initalized
+                || _itemsRemainingInCurrentBlock > 0
+                || _stream.Position < _stream.Length)
             {
                 return true;
             }
 
-            if (_itemsRemainingInCurrentBlock > 0)
-            {
-                return true;
-            }
-
-            // TODO this might not work.
-            return _stream.Position < _stream.Length;
+            return false;
         }
     }
 }

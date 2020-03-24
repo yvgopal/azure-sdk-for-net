@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Avro.Generic;
 
 namespace Azure.Storage.Blobs.ChangeFeed.Models
 {
@@ -12,8 +11,8 @@ namespace Azure.Storage.Blobs.ChangeFeed.Models
     {
         public override IReadOnlyList<BlobChangeFeedEvent> Values { get; }
         public override string ContinuationToken { get; }
-        public override Response GetRawResponse() => _raw;
-        private Response _raw;
+        public override Response GetRawResponse() => null;
+        //private Response _raw;
 
         public BlobChangeFeedEventPage() { }
 
@@ -23,16 +22,16 @@ namespace Azure.Storage.Blobs.ChangeFeed.Models
             ContinuationToken = continuationToken;
         }
 
-        public BlobChangeFeedEventPage(Response raw, List<GenericRecord> data)
-        {
-            _raw = raw;
-            ContinuationToken = null;
-            var changes = new List<BlobChangeFeedEvent>();
-            foreach (GenericRecord value in data)
-            {
-                changes.Add(new BlobChangeFeedEvent(value));
-            }
-            Values = changes;
-        }
+    //    public BlobChangeFeedEventPage(Response raw, List<GenericRecord> data)
+    //    {
+    //        _raw = raw;
+    //        ContinuationToken = null;
+    //        var changes = new List<BlobChangeFeedEvent>();
+    //        foreach (GenericRecord value in data)
+    //        {
+    //            changes.Add(new BlobChangeFeedEvent(value));
+    //        }
+    //        Values = changes;
+    //    }
     }
 }

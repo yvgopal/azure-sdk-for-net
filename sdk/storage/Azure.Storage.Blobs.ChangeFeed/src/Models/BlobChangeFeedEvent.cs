@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
-using Avro.Generic;
 
 namespace Azure.Storage.Blobs.ChangeFeed.Models
 {
@@ -18,14 +17,14 @@ namespace Azure.Storage.Blobs.ChangeFeed.Models
         /// <summary>
         /// Internal constructor.
         /// </summary>
-        internal BlobChangeFeedEvent(GenericRecord record)
+        internal BlobChangeFeedEvent(Dictionary<string, object> record)
         {
             Topic = (string)record["topic"];
             Subject = (string)record["subject"];
-            EventType = ToBlobChangeFeedEventType((GenericEnum)record["eventType"]);
+            EventType = ToBlobChangeFeedEventType((string)record["eventType"]);
             EventTime = DateTimeOffset.Parse((string)record["eventTime"], CultureInfo.InvariantCulture);
             Id = Guid.Parse((string)record["id"]);
-            EventData = new BlobChangeFeedEventData((GenericRecord)record["data"]);
+            EventData = new BlobChangeFeedEventData((Dictionary<string, object>)record["data"]);
             record.TryGetValue("dataVersion", out object dataVersion);
             DataVersion = (long?)dataVersion;
             record.TryGetValue("metadataVersion", out object metadataVersion);
@@ -75,9 +74,9 @@ namespace Azure.Storage.Blobs.ChangeFeed.Models
         /// </summary>
         public string MetadataVersion { get; internal set; }
 
-        private static BlobChangeFeedEventType ToBlobChangeFeedEventType(GenericEnum s)
+        private static BlobChangeFeedEventType ToBlobChangeFeedEventType(string s)
         {
-            switch (s.Value)
+            switch (s)
             {
                 case "BlobCreated":
                     return BlobChangeFeedEventType.BlobCreated;

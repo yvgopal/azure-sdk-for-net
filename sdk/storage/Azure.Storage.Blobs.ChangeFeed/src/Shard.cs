@@ -12,7 +12,7 @@ using Azure.Storage.Blobs.ChangeFeed.Models;
 
 namespace Azure.Storage.Blobs.ChangeFeed
 {
-    internal class Shard
+    internal class Shard : IDisposable
     {
         /// <summary>
         /// Container Client for listing Chunks.
@@ -109,23 +109,14 @@ namespace Azure.Storage.Blobs.ChangeFeed
                 _chunkIndex,
                 _currentChunk.EventIndex);
 
-        public async Task<bool> HasNext(bool async)
+        public bool HasNext()
         {
             if (!_isInitialized)
             {
                 return true;
             }
 
-            bool currentChunkHasNext;
-            if (async)
-            {
-                currentChunkHasNext = await _currentChunk.HasNext(async: true).ConfigureAwait(false);
-            }
-            else
-            {
-                currentChunkHasNext = _currentChunk.HasNext(async: false).EnsureCompleted();
-            }
-            return _chunks.Count > 0 || currentChunkHasNext;
+            return _chunks.Count > 0 || _currentChunk.HasNext();
         }
 
         public async Task<BlobChangeFeedEvent> Next(bool async)
@@ -142,16 +133,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
                 }
             }
 
-            bool hasNext;
-            if (async)
-            {
-                hasNext = await HasNext(async: true).ConfigureAwait(false);
-            }
-            else
-            {
-                hasNext = HasNext(async: false).EnsureCompleted();
-            }
-            if (!hasNext)
+            if (!HasNext())
             {
                 throw new InvalidOperationException("Shard doesn't have any more events");
             }
@@ -168,22 +150,18 @@ namespace Azure.Storage.Blobs.ChangeFeed
             }
 
             // Remove currentChunk if it doesn't have another event.
-            bool currentChunkHasNext;
-            if (async)
+            if (!_currentChunk.HasNext() && _chunks.Count > 0)
             {
-                currentChunkHasNext = await _currentChunk.HasNext(async: true).ConfigureAwait(false);
-            }
-            else
-            {
-                currentChunkHasNext = _currentChunk.HasNext(async: false).EnsureCompleted();
-            }
-
-            if (!currentChunkHasNext && _chunks.Count > 0)
-            {
+                _currentChunk.Dispose();
                 _currentChunk = new Chunk(_containerClient, _chunks.Dequeue());
                 _chunkIndex++;
             }
             return changeFeedEvent;
+        }
+
+        public void Dispose()
+        {
+            _currentChunk?.Dispose();
         }
     }
 }

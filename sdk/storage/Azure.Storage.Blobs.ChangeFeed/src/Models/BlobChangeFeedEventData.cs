@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using Avro.Generic;
 using Azure.Storage.Blobs.Models;
 
 namespace Azure.Storage.Blobs.ChangeFeed.Models
@@ -18,15 +17,15 @@ namespace Azure.Storage.Blobs.ChangeFeed.Models
         /// </summary>
         internal BlobChangeFeedEventData() { }
 
-        internal BlobChangeFeedEventData(GenericRecord record)
+        internal BlobChangeFeedEventData(Dictionary<string, object> record)
         {
-            Api = ((GenericEnum)record["api"]).Value;
+            Api = ((string)record["api"]);
             ClientRequestId = Guid.Parse((string)record["clientRequestId"]);
             RequestId = Guid.Parse((string)record["requestId"]);
             ETag = new ETag((string)record["etag"]);
             ContentType = (string)record["contentType"];
             ContentLength = (long)record["contentLength"];
-            BlobType = ((GenericEnum)record["blobType"]).Value switch
+            BlobType = ((string)record["blobType"]) switch
             {
                 "BlockBlob" => BlobType.Block,
                 "PageBlob" => BlobType.Page,
