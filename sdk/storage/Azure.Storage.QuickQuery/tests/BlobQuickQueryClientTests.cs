@@ -255,7 +255,7 @@ namespace Azure.Storage.QuickQuery.Tests
             {
                 IsFatal = false,
                 Name = "InvalidTypeConversion",
-                Description = "Invalid type conversion",
+                Description = "Invalid type conversion.",
                 Position = 0
             };
 
@@ -448,7 +448,7 @@ namespace Azure.Storage.QuickQuery.Tests
 
             public void ReportError(BlobQueryError blobQueryError)
             {
-                Assert.IsFalse(blobQueryError.IsFatal);
+                Assert.AreEqual(_expectedBlobQueryError.IsFatal, blobQueryError.IsFatal);
                 Assert.AreEqual(_expectedBlobQueryError.Name, blobQueryError.Name);
                 Assert.AreEqual(_expectedBlobQueryError.Description, blobQueryError.Description);
                 Assert.AreEqual(_expectedBlobQueryError.Position, blobQueryError.Position);

@@ -222,7 +222,7 @@ namespace Azure.Storage.QuickQuery
             {
                 BlobQueryError blobQueryError = new BlobQueryError
                 {
-                    IsFatal = false,
+                    IsFatal = (bool)fatal,
                     Name = (string)name,
                     Description = (string)description,
                     Position = (long)position
