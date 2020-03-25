@@ -129,14 +129,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
 
             if (!_isInitalized)
             {
-                if (async)
-                {
-                    await Initalize(async: true).ConfigureAwait(false);
-                }
-                else
-                {
-                    Initalize(async: false).EnsureCompleted();
-                }
+                await Initalize(async).ConfigureAwait(false);
             }
 
             if (!HasNext())
@@ -149,15 +142,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
             {
                 Shard currentShard = _shards[_shardIndex];
 
-                BlobChangeFeedEvent changeFeedEvent;
-                if (async)
-                {
-                    changeFeedEvent = await currentShard.Next(async: true).ConfigureAwait(false);
-                }
-                else
-                {
-                    changeFeedEvent = currentShard.Next(async: false).EnsureCompleted();
-                }
+                BlobChangeFeedEvent changeFeedEvent = await currentShard.Next(async).ConfigureAwait(false);
 
                 changeFeedEventList.Add(changeFeedEvent);
 

@@ -123,14 +123,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
         {
             if (!_isInitialized)
             {
-                if (async)
-                {
-                    await Initalize(async: true).ConfigureAwait(false);
-                }
-                else
-                {
-                    Initalize(async: false).EnsureCompleted();
-                }
+                await Initalize(async).ConfigureAwait(false);
             }
 
             if (!HasNext())
@@ -140,14 +133,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
 
             BlobChangeFeedEvent changeFeedEvent;
 
-            if (async)
-            {
-                changeFeedEvent = await _currentChunk.Next(async: true).ConfigureAwait(false);
-            }
-            else
-            {
-                changeFeedEvent = _currentChunk.Next(async: false).EnsureCompleted();
-            }
+            changeFeedEvent = await _currentChunk.Next(async).ConfigureAwait(false);
 
             // Remove currentChunk if it doesn't have another event.
             if (!_currentChunk.HasNext() && _chunks.Count > 0)

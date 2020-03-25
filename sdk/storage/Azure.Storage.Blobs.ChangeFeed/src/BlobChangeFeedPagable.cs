@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using Azure.Core.Pipeline;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.ChangeFeed.Models;
 
@@ -45,7 +46,12 @@ namespace Azure.Storage.Blobs.ChangeFeed
         /// <returns></returns>
         public override IEnumerable<Page<BlobChangeFeedEvent>> AsPages(string continuationToken = null, int? pageSizeHint = null)
         {
-            throw new NotImplementedException();
+            while (_changeFeed.HasNext())
+            {
+                yield return _changeFeed.GetPage(
+                    async: false,
+                    pageSize: pageSizeHint ?? 512).EnsureCompleted();
+            }
         }
     }
 }

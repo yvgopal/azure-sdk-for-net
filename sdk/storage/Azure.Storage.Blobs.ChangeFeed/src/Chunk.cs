@@ -75,14 +75,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
             {
                 for (int i = 0; i < EventIndex; i++)
                 {
-                    if (async)
-                    {
-                        await _avroReader.Next(async: true).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        _avroReader.Next(async: false).EnsureCompleted();
-                    }
+                    await _avroReader.Next(async).ConfigureAwait(false);
                 }
             }
         }
@@ -102,14 +95,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
         {
             if (!_isInitialized)
             {
-                if (async)
-                {
-                    await Initalize(async: true).ConfigureAwait(false);
-                }
-                else
-                {
-                    Initalize(async: false).EnsureCompleted();
-                }
+                await Initalize(async).ConfigureAwait(false);
             }
 
             Dictionary<string, object> result;
@@ -119,14 +105,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
                 return null;
             }
 
-            if (async)
-            {
-                result = await _avroReader.Next(async: true).ConfigureAwait(false);
-            }
-            else
-            {
-                result = _avroReader.Next(async: false).EnsureCompleted();
-            }
+            result = await _avroReader.Next(async).ConfigureAwait(false);
 
             EventIndex++;
             return new BlobChangeFeedEvent(result);

@@ -146,14 +146,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
             _lastConsumable = jsonMetaSegment.RootElement.GetProperty("lastConsumable").GetDateTimeOffset();
 
             // Get year paths
-            if (async)
-            {
-                _years = await GetYearPaths(async: true).ConfigureAwait(false);
-            }
-            else
-            {
-                _years = GetYearPaths(async: false).EnsureCompleted();
-            }
+            _years = await GetYearPaths(async).ConfigureAwait(false);
 
             // Dequeue any years that occur before start time
             if (_startTime.HasValue)
@@ -173,24 +166,12 @@ namespace Azure.Storage.Blobs.ChangeFeed
             string firstYearPath = _years.Dequeue();
 
             // Get Segments for first year
-            if (async)
-            {
-                _segments = await GetSegmentsInYear(
-                    async: true,
-                    yearPath: firstYearPath,
-                    startTime: _startTime,
-                    endTime: MinDateTime(_lastConsumable, _endTime))
-                    .ConfigureAwait(false);
-            }
-            else
-            {
-                _segments = GetSegmentsInYear(
-                    async: false,
-                    yearPath: firstYearPath,
-                    startTime: _startTime,
-                    endTime: MinDateTime(_lastConsumable, _endTime))
-                    .EnsureCompleted();
-            }
+            _segments = await GetSegmentsInYear(
+                async: async,
+                yearPath: firstYearPath,
+                startTime: _startTime,
+                endTime: MinDateTime(_lastConsumable, _endTime))
+                .ConfigureAwait(false);
 
             _currentSegment = new Segment(
                 _containerClient,
@@ -207,14 +188,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
         {
             if (!_isInitalized)
             {
-                if (async)
-                {
-                    await Initalize(async: true).ConfigureAwait(false);
-                }
-                else
-                {
-                    Initalize(async: false).EnsureCompleted();
-                }
+                await Initalize(async).ConfigureAwait(false);
             }
 
             if (!HasNext())
@@ -242,20 +216,10 @@ namespace Azure.Storage.Blobs.ChangeFeed
                 && HasNext())
             {
                 //TODO what if segment doesn't have a page size worth of data?
-                if (async)
-                {
-                    List<BlobChangeFeedEvent> newEvents = await _currentSegment.GetPage(async: true, remainingEvents).ConfigureAwait(false);
-                    blobChangeFeedEvents.AddRange(newEvents);
-                    remainingEvents -= newEvents.Count;
-                    await AdvanceSegmentIfNecessary(async: true).ConfigureAwait(false);
-                }
-                else
-                {
-                    List<BlobChangeFeedEvent> newEvents = _currentSegment.GetPage(async: false, remainingEvents).EnsureCompleted();
-                    blobChangeFeedEvents.AddRange(newEvents);
-                    remainingEvents -= newEvents.Count;
-                    AdvanceSegmentIfNecessary(async: false).EnsureCompleted();
-                }
+                List<BlobChangeFeedEvent> newEvents = await _currentSegment.GetPage(async, remainingEvents).ConfigureAwait(false);
+                blobChangeFeedEvents.AddRange(newEvents);
+                remainingEvents -= newEvents.Count;
+                await AdvanceSegmentIfNecessary(async).ConfigureAwait(false);
             }
 
             return new BlobChangeFeedEventPage(blobChangeFeedEvents, JsonSerializer.Serialize<BlobChangeFeedCursor>(GetCursor()));
@@ -353,24 +317,12 @@ namespace Azure.Storage.Blobs.ChangeFeed
                 string yearPath = _years.Dequeue();
 
                 // Get Segments for first year
-                if (async)
-                {
-                    _segments = await GetSegmentsInYear(
-                        async: true,
-                        yearPath: yearPath,
-                        startTime: _startTime,
-                        endTime: _endTime)
-                        .ConfigureAwait(false);
-                }
-                else
-                {
-                    _segments = GetSegmentsInYear(
-                        async: false,
-                        yearPath: yearPath,
-                        startTime: _startTime,
-                        endTime: _endTime)
-                        .EnsureCompleted();
-                }
+                _segments = await GetSegmentsInYear(
+                    async: async,
+                    yearPath: yearPath,
+                    startTime: _startTime,
+                    endTime: _endTime)
+                    .ConfigureAwait(false);
 
                 if (_segments.Count > 0)
                 {
