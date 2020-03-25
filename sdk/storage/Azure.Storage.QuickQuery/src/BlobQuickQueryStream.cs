@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Azure.Core.Pipeline;
 using Azure.Storage.Internal.Avro;
 using Azure.Storage.QuickQuery.Models;
@@ -65,8 +66,17 @@ namespace Azure.Storage.QuickQuery
         public override void Flush() => throw new NotSupportedException();
 
         /// <inheritdoc/>
-        // Note - offest is with respect to buffer.
         public override int Read(byte[] buffer, int offset, int count)
+            => ReadInternal(async: false, buffer, offset, count).EnsureCompleted();
+
+        /// <inheritdoc/>
+        public new async Task<int> ReadAsync(byte[] buffer, int offset, int count)
+            => await ReadInternal(async: true, buffer, offset, count).ConfigureAwait(false);
+
+
+        /// <inheritdoc/>
+        // Note - offest is with respect to buffer.
+        private async Task<int> ReadInternal(bool async, byte[] buffer, int offset, int count)
         {
             ValidateReadParameters(buffer, offset, count);
 
@@ -115,7 +125,7 @@ namespace Azure.Storage.QuickQuery
             {
                 // Get next Record.
                 //TODO in the future, this is where we will call the async version of this.
-                Dictionary<string, object> record = _avroReader.Next(async: false).EnsureCompleted();
+                Dictionary<string, object> record = await _avroReader.Next(async).ConfigureAwait(false);
 
                 switch (record["$schemaName"])
                 {
