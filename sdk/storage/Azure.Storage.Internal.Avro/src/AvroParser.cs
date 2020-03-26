@@ -224,17 +224,19 @@ namespace Azure.Storage.Internal.Avro
                                             f.GetProperty("name").GetString(),
                                             BuildParser(f.GetProperty("type")))).ToDictionary(p => p.Key, p => p.Value);
                                     var name = schema.GetProperty("name").GetString();
-                                    return (Parser)((async, p) =>
+                                    return (Parser)(async (async, p) =>
                                     {
                                         Dictionary<string, object> record = new Dictionary<string, object>();
                                         record["$schemaName"] = name;
                                         foreach (KeyValuePair<string, Parser> field in fields)
                                         {
 #pragma warning disable AZC0109 // Misuse of 'async' parameter.
-                                            record[field.Key] = field.Value(async, p);
+#pragma warning disable AZC0110 // DO NOT use await keyword in possibly synchronous scope.
+                                            record[field.Key] = await field.Value(async, p).ConfigureAwait(false);
+#pragma warning restore AZC0110 // DO NOT use await keyword in possibly synchronous scope.
 #pragma warning restore AZC0109 // Misuse of 'async' parameter.
                                         }
-                                        return Task.FromResult((object)record);
+                                        return record;
                                     });
                                 }
                             case "enum":
