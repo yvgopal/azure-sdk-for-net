@@ -7,8 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Parser = System.Func<Azure.Storage.Internal.Avro.AvroParser, object>;
-using AsyncParser = System.Func<Azure.Storage.Internal.Avro.AvroParser, System.Threading.Tasks.Task<object>>;
+using AsyncParser = System.Func<bool, Azure.Storage.Internal.Avro.AvroParser, System.Threading.Tasks.Task<object>>;
 using System.Text.Json;
 using Azure.Core.Pipeline;
 
@@ -18,7 +17,6 @@ namespace Azure.Storage.Internal.Avro
     {
         private Stream _stream;
         private AvroParser _parser;
-        private Parser _parserFunction;
         private AsyncParser _asyncParserFunction;
         private byte[] _syncMarker;
         private Dictionary<string, string> _metadata;
@@ -36,16 +34,8 @@ namespace Azure.Storage.Internal.Avro
         private async Task Initalize(bool async)
         {
             // Get and validate initBytes
-            byte[] initBytes;
+            byte[] initBytes = await _parser.ReadBytes(async, AvroConstants.InitBytesLength).ConfigureAwait(false);
 
-            if (async)
-            {
-                initBytes = await _parser.ReadBytesAsync(AvroConstants.InitBytesLength).ConfigureAwait(false);
-            }
-            else
-            {
-                initBytes = _parser.ReadBytes(AvroConstants.InitBytesLength);
-            }
 
             if (!initBytes.SequenceEqual(AvroConstants.InitBytes))
             {
@@ -53,25 +43,13 @@ namespace Azure.Storage.Internal.Avro
             }
 
             // Get metadata
-            if (async)
-            {
-                _metadata = await _parser.ParseMapAsync<string>(async (p) =>
-                    await p.ParseStringAsync().ConfigureAwait(false)).ConfigureAwait(false);
-            }
-            else
-            {
-                _metadata = _parser.ParseMap<string>(p => p.ParseString());
-            }
+            _metadata = await _parser.ParseMap<string>(async, async (async, p) =>
+                await p.ParseString(async).ConfigureAwait(false)).ConfigureAwait(false);
+
 
             // Get sync marker
-            if (async)
-            {
-                _syncMarker = await _parser.ReadBytesAsync(AvroConstants.SyncMarkerSize).ConfigureAwait(false);
-            }
-            else
-            {
-                _syncMarker = _parser.ReadBytes(AvroConstants.SyncMarkerSize);
-            }
+            _syncMarker = await _parser.ReadBytes(async, AvroConstants.SyncMarkerSize).ConfigureAwait(false);
+
 
             // Validate codec
             _metadata.TryGetValue(AvroConstants.CodecKey, out string codec);
@@ -84,28 +62,12 @@ namespace Azure.Storage.Internal.Avro
             // Build parser functions
             using JsonDocument schema = JsonDocument.Parse(_metadata[AvroConstants.SchemaKey]);
 
-            if (async)
-            {
-                _asyncParserFunction = _parser.BuildAsyncParser(schema.RootElement);
-            }
-            else
-            {
-                _parserFunction = _parser.BuildParser(schema.RootElement);
-            }
+             _asyncParserFunction = _parser.BuildParser(schema.RootElement);
 
             // Populate _itemsRemainingInCurrentBlock
-            if (async)
-            {
-                _itemsRemainingInCurrentBlock = await _parser.ParseLongAsync().ConfigureAwait(false);
-                // skip block length
-                await _parser.ParseLongAsync().ConfigureAwait(false);
-            }
-            else
-            {
-                _itemsRemainingInCurrentBlock = _parser.ParseLong();
-                // skip block length
-                _parser.ParseLong();
-            }
+            _itemsRemainingInCurrentBlock = await _parser.ParseLong(async).ConfigureAwait(false);
+            // skip block length
+            await _parser.ParseLong(async).ConfigureAwait(false);
             _initalized = true;
         }
 
@@ -129,58 +91,29 @@ namespace Azure.Storage.Internal.Avro
                 throw new ArgumentException("There are no more items in the stream");
             }
 
-            object result;
+#pragma warning disable AZC0110 // DO NOT use await keyword in possibly synchronous scope.
+            object result = await _asyncParserFunction(async, _parser).ConfigureAwait(false);
+#pragma warning restore AZC0110 // DO NOT use await keyword in possibly synchronous scope.
+            _itemsRemainingInCurrentBlock--;
 
-            if (async)
+            if (_itemsRemainingInCurrentBlock == 0)
             {
-                result = await _asyncParserFunction(_parser).ConfigureAwait(false);
-                _itemsRemainingInCurrentBlock--;
+                // Skip sync marker
+                await _parser.ReadBytes(async, 16).ConfigureAwait(false);
 
-                if (_itemsRemainingInCurrentBlock == 0)
+                try
                 {
-                    // Skip sync marker
-                    await _parser.ReadBytesAsync(16).ConfigureAwait(false);
-
-                    try
-                    {
-                        _itemsRemainingInCurrentBlock = await _parser.ParseLongAsync().ConfigureAwait(false);
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        // We hit the end of the stream.
-                    }
-
-                    if (_itemsRemainingInCurrentBlock > 0)
-                    {
-                        // Ignore block size
-                        await _parser.ParseLongAsync().ConfigureAwait(false);
-                    }
+                    _itemsRemainingInCurrentBlock = await _parser.ParseLong(async).ConfigureAwait(false);
                 }
-            }
-            else
-            {
-                result = _parserFunction(_parser);
-                _itemsRemainingInCurrentBlock--;
-
-                if (_itemsRemainingInCurrentBlock == 0)
+                catch (InvalidOperationException)
                 {
-                    // Skip sync marker
-                    _parser.ReadBytes(16);
+                    // We hit the end of the stream.
+                }
 
-                    try
-                    {
-                        _itemsRemainingInCurrentBlock = _parser.ParseLong();
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        // We hit the end of the stream.
-                    }
-
-                    if (_itemsRemainingInCurrentBlock > 0)
-                    {
-                        // Ignore block size
-                        _parser.ParseLong();
-                    }
+                if (_itemsRemainingInCurrentBlock > 0)
+                {
+                    // Ignore block size
+                    await _parser.ParseLong(async).ConfigureAwait(false);
                 }
             }
 
