@@ -366,7 +366,8 @@ namespace Azure.Storage.Blobs.Specialized
                 KeyResolver,
                 KeyWrapper,
                 CanIgnorePadding(contentRange),
-                async).ConfigureAwait(false);
+                async,
+                cancellationToken).ConfigureAwait(false);
 
             // retrim start of stream to original requested location
             // keeping in mind whether we already pulled the IV out of the stream as well

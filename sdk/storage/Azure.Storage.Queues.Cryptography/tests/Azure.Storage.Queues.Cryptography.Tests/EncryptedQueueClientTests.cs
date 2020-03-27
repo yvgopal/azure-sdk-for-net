@@ -58,18 +58,17 @@ namespace Azure.Storage.Queues.Cryptography.Tests
         /// Creates an encrypted queue client from a normal queue client. Note that this method does not copy over any
         /// client options from the container client. You must pass in your own options. These options will be mutated.
         /// </summary>
-        public async Task<EncryptedQueueClient> GetEncryptedQueueClient(
+        public EncryptedQueueClient GetEncryptedQueueClient(
             QueueClient queue,
             ClientsideEncryptionOptions encryptionOptions,
             QueueClientOptions options)
         {
-            var client = new EncryptedQueueClient(
+            var client = InstrumentClient(new EncryptedQueueClient(
                 queue.Uri,
                 new StorageSharedKeyCredential(TestConfigDefault.AccountName, TestConfigDefault.AccountKey),
                 encryptionOptions,
-                options);
+                options));
 
-            await client.CreateAsync();
             return client;
         }
 
@@ -107,7 +106,7 @@ namespace Azure.Storage.Queues.Cryptography.Tests
             var mockKey = new MockKeyEncryptionKey();
             await using (var disposable = await GetTestQueueAsync())
             {
-                var queue = await GetEncryptedQueueClient(
+                var queue = GetEncryptedQueueClient(
                     disposable.Queue,
                     new ClientsideEncryptionOptions()
                     {
@@ -153,7 +152,7 @@ namespace Azure.Storage.Queues.Cryptography.Tests
             var mockKey = new MockKeyEncryptionKey();
             await using (var disposable = await GetTestQueueAsync())
             {
-                var queue = await GetEncryptedQueueClient(
+                var queue = GetEncryptedQueueClient(
                     disposable.Queue,
                     new ClientsideEncryptionOptions()
                     {
@@ -187,7 +186,7 @@ namespace Azure.Storage.Queues.Cryptography.Tests
             var mockKey = new MockKeyEncryptionKey();
             await using (var disposable = await GetTestQueueAsync())
             {
-                var track2Queue = await GetEncryptedQueueClient(
+                var track2Queue = GetEncryptedQueueClient(
                     disposable.Queue,
                     new ClientsideEncryptionOptions()
                     {
@@ -233,7 +232,7 @@ namespace Azure.Storage.Queues.Cryptography.Tests
             var mockKey = new MockKeyEncryptionKey();
             await using (var disposable = await GetTestQueueAsync())
             {
-                var track2Queue = await GetEncryptedQueueClient(
+                var track2Queue = GetEncryptedQueueClient(
                     disposable.Queue,
                     new ClientsideEncryptionOptions()
                     {
@@ -288,6 +287,99 @@ namespace Azure.Storage.Queues.Cryptography.Tests
                 var downloadedMessage = receivedMessages[0].MessageText;
 
                 Assert.AreEqual(message, downloadedMessage);
+            }
+        }
+
+        [Test]
+        [LiveOnly] // cannot seed content encryption key
+        public async Task ReadPlaintextMessage()
+        {
+            var message = "any old message";
+            var mockKey = new MockKeyEncryptionKey();
+            await using (var disposable = await GetTestQueueAsync())
+            {
+                var plainQueueClient = disposable.Queue;
+                var encryptedQueueClient = GetEncryptedQueueClient(
+                    disposable.Queue,
+                    new ClientsideEncryptionOptions()
+                    {
+                        KeyEncryptionKey = mockKey,
+                        KeyResolver = mockKey
+                    },
+                    GetOptions());
+
+                // upload with encryption
+                await plainQueueClient.SendMessageAsync(message);
+
+                // download with decryption
+                var receivedMessages = (await encryptedQueueClient.ReceiveMessagesAsync()).Value;
+                Assert.AreEqual(1, receivedMessages.Length);
+                var downloadedMessage = receivedMessages[0].MessageText;
+
+                // compare data
+                Assert.AreEqual(message, downloadedMessage);
+            }
+        }
+
+        [Test]
+        [LiveOnly] // cannot seed content encryption key
+        public async Task OnlyOneKeyWrapCall()
+        {
+            var message = "any old message";
+            var mockKey = new MockKeyEncryptionKey();
+            await using (var disposable = await GetTestQueueAsync())
+            {
+                var queue = GetEncryptedQueueClient(
+                    disposable.Queue,
+                    new ClientsideEncryptionOptions()
+                    {
+                        KeyEncryptionKey = mockKey,
+                        KeyResolver = mockKey
+                    },
+                    GetOptions());
+
+                await queue.SendMessageAsync(message).ConfigureAwait(false);
+
+                Assert.AreEqual(1, IsAsync ? mockKey.WrappedAsync : mockKey.WrappedSync);
+                Assert.AreEqual(0, IsAsync ? mockKey.WrappedSync : mockKey.WrappedAsync);
+            }
+        }
+
+        [Test]
+        [LiveOnly] // cannot seed content encryption key
+        public async Task OnlyOneKeyResolveAndUnwrapCall()
+        {
+            var message = "any old message";
+            var mockKey = new MockKeyEncryptionKey();
+            await using (var disposable = await GetTestQueueAsync())
+            {
+                var queue = GetEncryptedQueueClient(
+                    disposable.Queue,
+                    new ClientsideEncryptionOptions()
+                    {
+                        KeyEncryptionKey = mockKey,
+                        KeyResolver = mockKey
+                    },
+                    GetOptions());
+                await queue.SendMessageAsync(message).ConfigureAwait(false);
+                mockKey.ResetCounters();
+
+                queue = GetEncryptedQueueClient(
+                    disposable.Queue,
+                    new ClientsideEncryptionOptions()
+                    {
+                        KeyEncryptionKey = default, // we want the key resolver to trigger; no cached key
+                        KeyResolver = mockKey
+                    },
+                    GetOptions());
+
+                await queue.ReceiveMessagesAsync();
+
+                Assert.AreEqual(1, IsAsync ? mockKey.ResolvedAsync : mockKey.ResolvedSync);
+                Assert.AreEqual(0, IsAsync ? mockKey.ResolvedSync : mockKey.ResolvedAsync);
+
+                Assert.AreEqual(1, IsAsync ? mockKey.UnwrappedAsync : mockKey.UnwrappedSync);
+                Assert.AreEqual(0, IsAsync ? mockKey.UnwrappedSync : mockKey.UnwrappedAsync);
             }
         }
     }

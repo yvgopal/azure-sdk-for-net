@@ -1496,7 +1496,7 @@ namespace Azure.Storage.Queues
                             ClientDiagnostics,
                             Pipeline,
                             MessagesUri,
-                            message: new QueueSendMessage { MessageText = TransformMessageUpload(messageText, cancellationToken) },
+                            message: new QueueSendMessage { MessageText = await ApplyTransformOnUploadInternal(messageText, async, cancellationToken).ConfigureAwait(false) },
                             version: Version.ToVersionString(),
                             visibilitytimeout: (int?)visibilityTimeout?.TotalSeconds,
                             messageTimeToLive: (int?)timeToLive?.TotalSeconds,
@@ -1680,7 +1680,9 @@ namespace Azure.Storage.Queues
                     // Return an exploding Response on 304
                     return response.IsUnavailable() ?
                         response.GetRawResponse().AsNoBodyResponse<QueueMessage[]>() :
-                        Response.FromValue(ApplyTransformOnDownload(response.Value, cancellationToken).ToArray(), response.GetRawResponse());
+                        Response.FromValue(
+                            (await ApplyTransformOnDownloadInternal(response.Value, async, cancellationToken).ConfigureAwait(false)).ToArray(),
+                            response.GetRawResponse());
                 }
                 catch (Exception ex)
                 {
@@ -1787,7 +1789,9 @@ namespace Azure.Storage.Queues
                     // Return an exploding Response on 304
                     return response.IsUnavailable() ?
                         response.GetRawResponse().AsNoBodyResponse<PeekedMessage[]>() :
-                        Response.FromValue(ApplyTransformOnDownload(response.Value, cancellationToken).ToArray(), response.GetRawResponse());
+                        Response.FromValue(
+                            (await ApplyTransformOnDownloadInternal(response.Value, async, cancellationToken).ConfigureAwait(false)).ToArray(),
+                            response.GetRawResponse());
                 }
                 catch (Exception ex)
                 {
@@ -2041,7 +2045,7 @@ namespace Azure.Storage.Queues
                         ClientDiagnostics,
                         Pipeline,
                         uri,
-                        message: new QueueSendMessage { MessageText = TransformMessageUpload(messageText, cancellationToken) },
+                        message: new QueueSendMessage { MessageText = await ApplyTransformOnUploadInternal(messageText, async, cancellationToken).ConfigureAwait(false) },
                         popReceipt: popReceipt,
                         visibilitytimeout: (int)visibilityTimeout.TotalSeconds,
                         version: Version.ToVersionString(),
@@ -2072,6 +2076,7 @@ namespace Azure.Storage.Queues
         //protected static (QueueClientOptions options, HttpPipelinePolicy authPolicy) GetContainerPipelineInfo(QueueServiceClient serviceClient)
         //    => (serviceClient.SourceOptions, serviceClient.AuthenticationPolicy);
 
+        #region Transform Upload
         /// <summary>
         /// Performs a transform on the message before upload. It is a no-op by default.
         /// </summary>
@@ -2089,6 +2094,29 @@ namespace Azure.Storage.Queues
         }
 
         /// <summary>
+        /// Performs a transform on the message before upload. It is a no-op by default.
+        /// </summary>
+        /// <param name="messageToUpload">Message to queue.</param>
+        /// <param name="cancellationToken">Cancellation token for the transformation.</param>
+        /// <remarks>
+        /// This method is synchronous, as queue messages are so small we don't even accept
+        /// streams in public APIs. We take strings, so everything is loaded into memory by the
+        /// time we get here.
+        /// </remarks>
+        /// <returns>Transformed content stream and metadata.</returns>
+        protected virtual Task<string> TransformMessageUploadAsync(string messageToUpload, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(messageToUpload); // no-op
+        }
+
+        private async Task<string> ApplyTransformOnUploadInternal(string messageToUpload, bool async, CancellationToken cancellationToken)
+            => async
+                ? await TransformMessageUploadAsync(messageToUpload, cancellationToken).ConfigureAwait(false)
+                : TransformMessageUpload(messageToUpload, cancellationToken);
+        #endregion
+
+        #region Transform Download
+        /// <summary>
         /// Performs a transform on the message after download. It is a no-op by default.
         /// </summary>
         /// <param name="downloadedMessage">Downloaded message.</param>
@@ -2103,23 +2131,43 @@ namespace Azure.Storage.Queues
             return downloadedMessage; // no-op
         }
 
-        private IEnumerable<QueueMessage> ApplyTransformOnDownload(IEnumerable<QueueMessage> messages, CancellationToken cancellationToken)
+        /// <summary>
+        /// Performs a transform on the message after download. It is a no-op by default.
+        /// </summary>
+        /// <param name="downloadedMessage">Downloaded message.</param>
+        /// <param name="cancellationToken">Cancellation token for the transformation.</param>
+        /// <remarks>
+        /// This method is synchronous, as queue messages are so small they are buffered into
+        /// strings within the autorest layer. Everything is loaded into memory by the time we get here.
+        /// </remarks>
+        /// <returns></returns>
+        protected virtual Task<string> TransformMessageDownloadAsync(string downloadedMessage, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(downloadedMessage); // no-op
+        }
+
+        private async Task<IEnumerable<QueueMessage>> ApplyTransformOnDownloadInternal(IEnumerable<QueueMessage> messages, bool async, CancellationToken cancellationToken)
         {
             foreach (var message in messages)
             {
-                message.MessageText = TransformMessageDownload(message.MessageText, cancellationToken);
+                message.MessageText = async
+                    ? await TransformMessageDownloadAsync(message.MessageText, cancellationToken).ConfigureAwait(false)
+                    : TransformMessageDownload(message.MessageText, cancellationToken);
             }
             return messages;
         }
 
-        private IEnumerable<PeekedMessage> ApplyTransformOnDownload(IEnumerable<PeekedMessage> messages, CancellationToken cancellationToken)
+        private async Task<IEnumerable<PeekedMessage>> ApplyTransformOnDownloadInternal(IEnumerable<PeekedMessage> messages, bool async, CancellationToken cancellationToken)
         {
             foreach (var message in messages)
             {
-                message.MessageText = TransformMessageDownload(message.MessageText, cancellationToken);
+                message.MessageText = async
+                    ? await TransformMessageDownloadAsync(message.MessageText, cancellationToken).ConfigureAwait(false)
+                    : TransformMessageDownload(message.MessageText, cancellationToken);
             }
             return messages;
         }
+        #endregion
 
         /// <summary>
         /// Accessor for extensions of <see cref="QueueClient"/> in other packages, granting

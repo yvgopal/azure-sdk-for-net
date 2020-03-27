@@ -97,8 +97,11 @@ namespace Azure.Storage.Blobs.Cryptography.Tests
                 var encryptedData = encryptedDataStream.ToArray();
 
                 // encrypt original data manually for comparison
-                EncryptionData encryptionMetadata = ClientSideDecryptionPolicy.GetAndValidateEncryptionData(
-                    (await blob.GetPropertiesAsync()).Value.Metadata);
+                if (!(await blob.GetPropertiesAsync()).Value.Metadata.TryGetValue(EncryptionConstants.EncryptionDataKey, out string serialEncryptionData))
+                {
+                    Assert.Fail("No encryption metadata present.");
+                }
+                EncryptionData encryptionMetadata = EncryptionDataSerializer.Deserialize(serialEncryptionData);
                 Assert.NotNull(encryptionMetadata, "Never encrypted data.");
                 byte[] expectedEncryptedData = LocalManualEncryption(
                     data,

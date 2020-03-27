@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Azure.Core;
 using Azure.Core.Cryptography;
 using Azure.Core.Pipeline;
@@ -221,14 +222,21 @@ namespace Azure.Storage.Queues.Specialized
 
         /// <inheritdoc/>
         protected override string TransformMessageUpload(string messageToUpload, CancellationToken cancellationToken)
+            => TransformMessageUploadInternal(messageToUpload, false, cancellationToken).EnsureCompleted();
+
+        /// <inheritdoc/>
+        protected override async Task<string> TransformMessageUploadAsync(string messageToUpload, CancellationToken cancellationToken)
+            => await TransformMessageUploadInternal(messageToUpload, true, cancellationToken).ConfigureAwait(false);
+
+        private async Task<string> TransformMessageUploadInternal(string messageToUpload, bool async, CancellationToken cancellationToken)
         {
             var bytesToEncrypt = Encoding.UTF8.GetBytes(messageToUpload);
-            (byte[] ciphertext, EncryptionData encryptionData) = BufferedEncryptInternal(
+            (byte[] ciphertext, EncryptionData encryptionData) = await BufferedEncryptInternal(
                 new MemoryStream(bytesToEncrypt),
                 KeyWrapper,
                 KeyWrapAlgorithm,
-                async: false,
-                cancellationToken).EnsureCompleted();
+                async: async,
+                cancellationToken).ConfigureAwait(false);
 
             return EncryptedMessageSerializer.Serialize(new EncryptedMessage
             {
@@ -239,16 +247,27 @@ namespace Azure.Storage.Queues.Specialized
 
         /// <inheritdoc/>
         protected override string TransformMessageDownload(string downloadedMessage, CancellationToken cancellationToken)
+            => TransformMessageDownloadInternal(downloadedMessage, false, cancellationToken).EnsureCompleted();
+
+        /// <inheritdoc/>
+        protected override async Task<string> TransformMessageDownloadAsync(string downloadedMessage, CancellationToken cancellationToken)
+            => await TransformMessageDownloadInternal(downloadedMessage, true, cancellationToken).ConfigureAwait(false);
+
+        private async Task<string> TransformMessageDownloadInternal(string downloadedMessage, bool async, CancellationToken cancellationToken)
         {
-            var encryptedMessage = EncryptedMessageSerializer.Deserialize(downloadedMessage);
-            var decryptedMessageStream = DecryptInternal(
+            if (!EncryptedMessageSerializer.TryDeserialize(downloadedMessage, out var encryptedMessage))
+            {
+                return downloadedMessage; // not recognized as client-side encrypted message
+            }
+            var decryptedMessageStream = await DecryptInternal(
                 new MemoryStream(Convert.FromBase64String(encryptedMessage.EncryptedMessageContents)),
                 encryptedMessage.EncryptionData,
                 ivInStream: false,
                 KeyResolver,
                 KeyWrapper,
                 noPadding: false,
-                async: false).EnsureCompleted();
+                async: async,
+                cancellationToken).ConfigureAwait(false);
 
             return new StreamReader(decryptedMessageStream, Encoding.UTF8).ReadToEnd();
         }

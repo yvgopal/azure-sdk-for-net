@@ -21,6 +21,25 @@ namespace Azure.Storage.Tests.Shared
 
         public string KeyId { get; }
 
+        #region Counters
+        public int WrappedSync { get; private set; }
+        public int WrappedAsync { get; private set; }
+        public int UnwrappedSync { get; private set; }
+        public int UnwrappedAsync { get; private set; }
+        public int ResolvedSync { get; private set; }
+        public int ResolvedAsync { get; private set; }
+
+        public void ResetCounters()
+        {
+            WrappedSync = 0;
+            WrappedAsync = 0;
+            UnwrappedSync = 0;
+            UnwrappedAsync = 0;
+            ResolvedSync = 0;
+            ResolvedAsync = 0;
+        }
+        #endregion
+
         /// <summary>
         /// Generates a key encryption key with the given properties.
         /// </summary>
@@ -37,22 +56,26 @@ namespace Azure.Storage.Tests.Shared
 
         public byte[] UnwrapKey(string algorithm, ReadOnlyMemory<byte> encryptedKey, CancellationToken cancellationToken = default)
         {
+            UnwrappedSync++;
             return Xor(encryptedKey.ToArray(), KeyEncryptionKey.ToArray());
         }
 
         public Task<byte[]> UnwrapKeyAsync(string algorithm, ReadOnlyMemory<byte> encryptedKey, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(UnwrapKey(algorithm, encryptedKey, cancellationToken));
+            UnwrappedAsync++;
+            return Task.FromResult(Xor(encryptedKey.ToArray(), KeyEncryptionKey.ToArray()));
         }
 
         public byte[] WrapKey(string algorithm, ReadOnlyMemory<byte> key, CancellationToken cancellationToken = default)
         {
+            WrappedSync++;
             return Xor(key.ToArray(), KeyEncryptionKey.ToArray());
         }
 
         public Task<byte[]> WrapKeyAsync(string algorithm, ReadOnlyMemory<byte> key, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(WrapKey(algorithm, key, cancellationToken));
+            WrappedAsync++;
+            return Task.FromResult(Xor(key.ToArray(), KeyEncryptionKey.ToArray()));
         }
 
         private static byte[] Xor(byte[] a, byte[] b)
@@ -78,15 +101,22 @@ namespace Azure.Storage.Tests.Shared
                 throw new ArgumentException("Mock key resolver cannot find this keyId.");
             }
 
+            ResolvedSync++;
             return this;
         }
 
         public Task<IKeyEncryptionKey> ResolveAsync(string keyId, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(Resolve(keyId, cancellationToken));
+            if (keyId != this.KeyId.ToString())
+            {
+                throw new ArgumentException("Mock key resolver cannot find this keyId.");
+            }
+
+            ResolvedAsync++;
+            return Task.FromResult((IKeyEncryptionKey)this);
         }
 
-        // Track 1 implementation
+        #region Track 1 Impl
 
         string IKey.DefaultEncryptionAlgorithm => throw new NotImplementedException();
 
@@ -129,5 +159,6 @@ namespace Azure.Storage.Tests.Shared
 
         async Task<IKey> IKeyResolver.ResolveKeyAsync(string kid, CancellationToken token)
             => (MockKeyEncryptionKey)await ResolveAsync(kid, token); // we know we returned `this`;
+        #endregion
     }
 }

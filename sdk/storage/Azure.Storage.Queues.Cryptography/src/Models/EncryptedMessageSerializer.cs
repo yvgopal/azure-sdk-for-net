@@ -13,10 +13,10 @@ namespace Azure.Storage.Queues.Specialized.Models
         #region Serialize
         public static string Serialize(EncryptedMessage data)
         {
-            return Encoding.UTF8.GetString(SerializeEncryptionData(data).ToArray());
+            return Encoding.UTF8.GetString(SerializeEncryptedMessage(data).ToArray());
         }
 
-        public static ReadOnlyMemory<byte> SerializeEncryptionData(EncryptedMessage message)
+        public static ReadOnlyMemory<byte> SerializeEncryptedMessage(EncryptedMessage message)
         {
             var writer = new Core.ArrayBufferWriter<byte>();
             using var json = new Utf8JsonWriter(writer);
@@ -40,13 +40,27 @@ namespace Azure.Storage.Queues.Specialized.Models
         #endregion
 
         #region Deserialize
+        public static bool TryDeserialize(string serializedData, out EncryptedMessage encryptedMessage)
+        {
+            try
+            {
+                encryptedMessage = Deserialize(serializedData);
+                return true;
+            }
+            catch (JsonException)
+            {
+                encryptedMessage = default;
+                return false;
+            }
+        }
+
         public static EncryptedMessage Deserialize(string serializedData)
         {
             var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(serializedData));
-            return DeserializeEncryptionData(ref reader);
+            return DeserializeEncryptedMessage(ref reader);
         }
 
-        public static EncryptedMessage DeserializeEncryptionData(ref Utf8JsonReader reader)
+        public static EncryptedMessage DeserializeEncryptedMessage(ref Utf8JsonReader reader)
         {
             using JsonDocument json = JsonDocument.ParseValue(ref reader);
             JsonElement root = json.RootElement;

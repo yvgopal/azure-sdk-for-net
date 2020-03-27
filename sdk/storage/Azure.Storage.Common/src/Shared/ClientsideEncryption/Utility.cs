@@ -55,6 +55,7 @@ namespace Azure.Storage.Common.Cryptography
         /// the blob (where the padding occurs) was not downloaded.
         /// </param>
         /// <param name="async">Whether to perform this function asynchronously.</param>
+        /// <param name="cancellationToken"></param>
         public static async Task<Stream> DecryptInternal(
             Stream ciphertext,
             EncryptionData encryptionData,
@@ -62,7 +63,8 @@ namespace Azure.Storage.Common.Cryptography
             IKeyEncryptionKeyResolver keyResolver,
             IKeyEncryptionKey potentialCachedKeyWrapper,
             bool noPadding,
-            bool async)
+            bool async,
+            CancellationToken cancellationToken)
         {
             Stream plaintext;
             //int read = 0;
@@ -78,7 +80,7 @@ namespace Azure.Storage.Common.Cryptography
                     IV = new byte[EncryptionConstants.EncryptionBlockSize];
                     if (async)
                     {
-                        await ciphertext.ReadAsync(IV, 0, IV.Length).ConfigureAwait(false);
+                        await ciphertext.ReadAsync(IV, 0, IV.Length, cancellationToken).ConfigureAwait(false);
                     }
                     else
                     {
@@ -87,7 +89,7 @@ namespace Azure.Storage.Common.Cryptography
                     //read = IV.Length;
                 }
 
-                var contentEncryptionKey = await GetContentEncryptionKeyAsync(encryptionData, keyResolver, potentialCachedKeyWrapper, async).ConfigureAwait(false);
+                var contentEncryptionKey = await GetContentEncryptionKeyAsync(encryptionData, keyResolver, potentialCachedKeyWrapper, async, cancellationToken).ConfigureAwait(false);
 
                 plaintext = WrapStream(
                     ciphertext,
@@ -114,13 +116,15 @@ namespace Azure.Storage.Common.Cryptography
         /// <param name="keyResolver"></param>
         /// <param name="potentiallyCachedKeyWrapper"></param>
         /// <param name="async">Whether to perform asynchronously.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>Encryption key as a byte array.</returns>
         private static async Task<Memory<byte>> GetContentEncryptionKeyAsync(
 #pragma warning restore CS1587 // XML comment is not placed on a valid language element
             EncryptionData encryptionData,
             IKeyEncryptionKeyResolver keyResolver,
             IKeyEncryptionKey potentiallyCachedKeyWrapper,
-            bool async)
+            bool async,
+            CancellationToken cancellationToken)
         {
             IKeyEncryptionKey key;
 
@@ -132,10 +136,9 @@ namespace Azure.Storage.Common.Cryptography
             // Otherwise, use the resolver.
             else if (keyResolver != null)
             {
-                var resolveTask = keyResolver.ResolveAsync(encryptionData.WrappedContentKey.KeyId);
                 key = async
-                    ? await keyResolver.ResolveAsync(encryptionData.WrappedContentKey.KeyId).ConfigureAwait(false)
-                    : keyResolver.Resolve(encryptionData.WrappedContentKey.KeyId);
+                    ? await keyResolver.ResolveAsync(encryptionData.WrappedContentKey.KeyId, cancellationToken).ConfigureAwait(false)
+                    : keyResolver.Resolve(encryptionData.WrappedContentKey.KeyId, cancellationToken);
             }
             else
             {
