@@ -70,13 +70,18 @@ namespace Azure.Storage.Internal.Avro
             CancellationToken cancellationToken)
         {
             byte[] data = new byte[length];
-            int read = 0;
-            while (read < length)
+            int start = 0;
+            while (length > 0)
             {
-                read = async ?
-                    await stream.ReadAsync(data, read, length, cancellationToken).ConfigureAwait(false) :
-                    stream.Read(data, read, length);
-                if (read <= 0) throw new InvalidOperationException("Unexpected end of input.");
+                int n = async ?
+                    await stream.ReadAsync(data, start, length, cancellationToken).ConfigureAwait(false) :
+                    stream.Read(data, start, length);
+                start += n;
+                length -= n;
+
+                // We hit the end of the stream
+                if (n <= 0)
+                    return data;
             }
             return data;
         }

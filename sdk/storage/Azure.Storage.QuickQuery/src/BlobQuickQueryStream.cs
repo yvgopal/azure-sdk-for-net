@@ -127,7 +127,7 @@ namespace Azure.Storage.QuickQuery
                 //TODO in the future, this is where we will call the async version of this.
                 Dictionary<string, object> record = await _avroReader.Next(async).ConfigureAwait(false);
 
-                switch (record["$schemaName"])
+                switch (record["$schema"])
                 {
                     // Data Record
                     case Constants.QuickQuery.DataRecordName:
