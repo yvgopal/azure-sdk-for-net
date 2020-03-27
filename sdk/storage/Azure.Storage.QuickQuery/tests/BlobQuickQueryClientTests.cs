@@ -204,16 +204,16 @@ namespace Azure.Storage.QuickQuery.Tests
 
             CsvTextConfiguration cvsTextConfiguration = new CsvTextConfiguration
             {
-                ColumnSeparator = ',',
+                ColumnSeparator = ",",
                 FieldQuote = '"',
                 EscapeCharacter = '\\',
-                RecordSeparator = '\n',
+                RecordSeparator = "\n",
                 HasHeaders = false
             };
 
             JsonTextConfiguration jsonTextConfiguration = new JsonTextConfiguration
             {
-                RecordSeparator = '\n'
+                RecordSeparator = "\n"
             };
 
             // Act
@@ -280,7 +280,7 @@ namespace Azure.Storage.QuickQuery.Tests
             string query = @"SELECT * from BlobStorage;";
             JsonTextConfiguration jsonTextConfiguration = new JsonTextConfiguration
             {
-                RecordSeparator = '\n'
+                RecordSeparator = "\n"
             };
 
             // Act - with no IBlobQueryErrorReceiver

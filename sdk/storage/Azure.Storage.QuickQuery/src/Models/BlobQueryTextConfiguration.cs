@@ -15,6 +15,6 @@ namespace Azure.Storage.QuickQuery.Models
         /// <summary>
         /// Record Separator.
         /// </summary>
-        public char? RecordSeparator { get; set; }
+        public string RecordSeparator { get; set; }
     }
 }

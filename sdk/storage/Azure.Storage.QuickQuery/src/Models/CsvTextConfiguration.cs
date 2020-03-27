@@ -15,7 +15,7 @@ namespace Azure.Storage.QuickQuery.Models
         /// <summary>
         /// Column separator.
         /// </summary>
-        public char? ColumnSeparator { get; set; }
+        public string ColumnSeparator { get; set; }
 
         /// <summary>
         /// Field quote.
