@@ -3,95 +3,105 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Text.Json;
-using Parser = System.Func<bool, Azure.Storage.Internal.Avro.AvroParser, System.Threading.Tasks.Task<object>>;
+using System.Threading;
+using System.Threading.Tasks;
+using Azure.Core.Pipeline;
+
+#pragma warning disable SA1402 // File may only contain a single type
 
 namespace Azure.Storage.Internal.Avro
 {
-    internal class AvroParser
+    internal static class AvroParser
     {
-        private Stream _stream;
+        public static List<object> Parse(Stream stream, CancellationToken cancellationToken = default) =>
+            ReadObjectContainerFileAsync(stream, async: false, cancellationToken).EnsureCompleted();
 
-        public AvroParser(Stream stream)
+        public static async Task<List<object>> ParseAsync(Stream stream, CancellationToken cancellationToken = default) =>
+            await ReadObjectContainerFileAsync(stream, async: true, cancellationToken).ConfigureAwait(false);
+
+        private static async Task<List<object>> ReadObjectContainerFileAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken = default)
         {
-            _stream = stream;
-        }
+            // Four bytes, ASCII 'O', 'b', 'j', followed by 1.
+            byte[] header = await ReadFixedBytesAsync(stream, AvroConstants.InitBytes.Length, async, cancellationToken).ConfigureAwait(false);
+            Debug.Assert(header[0] == AvroConstants.InitBytes[0]);
+            Debug.Assert(header[1] == AvroConstants.InitBytes[1]);
+            Debug.Assert(header[2] == AvroConstants.InitBytes[2]);
+            Debug.Assert(header[3] == AvroConstants.InitBytes[3]);
 
-        private async Task<byte> ReadByte(bool async)
-        {
-            byte[] data = new byte[1];
-            if (async)
-            {
-                await _stream.ReadAsync(data, 0, 1).ConfigureAwait(false);
-            }
-            else
-            {
-                _stream.Read(data, 0, 1);
-            }
+            // File metadata is written as if defined by the following map schema:
+            // { "type": "map", "values": "bytes"}
+            Dictionary<string, string> metadata = await ReadMapAsync(stream, ReadStringAsync, async, cancellationToken).ConfigureAwait(false);
+            Debug.Assert(metadata[AvroConstants.CodecKey] == "null");
 
-            if (data[0] < 0)
-                throw new InvalidOperationException("Unexpected end of input.");
-            return (byte)data[0];
-        }
+            // The 16-byte, randomly-generated sync marker for this file.
+            byte[] syncMarker = await ReadFixedBytesAsync(stream, AvroConstants.SyncMarkerSize, async, cancellationToken).ConfigureAwait(false);
 
-        public async Task<byte[]> ReadBytes(bool async, int length)
-        {
-            byte[] data = new byte[length];
-            int start = 0;
-            while (length > 0)
+            // Parse the schema
+            using JsonDocument schema = JsonDocument.Parse(metadata[AvroConstants.SchemaKey]);
+            AvroType itemType = AvroType.FromSchema(schema.RootElement);
+
+            // File data blocks
+            var data = new List<object>();
+            while (stream.Position < stream.Length)
             {
-                int n;
-                if (async)
+                long length = await ReadLongAsync(stream, async, cancellationToken).ConfigureAwait(false);
+                await ReadLongAsync(stream, async, cancellationToken).ConfigureAwait(false); // Ignore the block size
+                while (length-- > 0)
                 {
-                    n = await _stream.ReadAsync(data, start, length).ConfigureAwait(false);
+                    object value = await itemType.ReadAsync(stream, async, cancellationToken).ConfigureAwait(false);
+                    data.Add(value);
                 }
-                else
-                {
-                    n = _stream.Read(data, start, length);
-                }
-
-                start += n;
-                length -= n;
+                await ReadFixedBytesAsync(stream, AvroConstants.SyncMarkerSize, async, cancellationToken).ConfigureAwait(false); // Ignore the sync check
             }
             return data;
         }
 
-        public async Task<Dictionary<string, T>> ParseMap<T>(bool async, Func<bool, AvroParser, Task<T>> itemParser)
+        public static async Task<byte[]> ReadFixedBytesAsync(
+            Stream stream,
+            int length,
+            bool async,
+            CancellationToken cancellationToken)
         {
-            List<KeyValuePair<string, T>> list = await ParseArray(async, async (async, p) => new KeyValuePair<string, T>(
-                await ParseString(async).ConfigureAwait(false),
-                await itemParser(async, p).ConfigureAwait(false))).ConfigureAwait(false);
-            return list.ToDictionary(p => p.Key, p => p.Value);
-        }
-
-        public async Task<List<T>> ParseArray<T>(bool async, Func<bool, AvroParser, Task<T>> itemParser)
-        {
-            List<T> list = new List<T>();
-            for (long length = await ParseLong(async).ConfigureAwait(false); length != 0; length = await ParseLong(async).ConfigureAwait(false))
+            byte[] data = new byte[length];
+            int read = 0;
+            while (read < length)
             {
-                // Ignore block sizes because we're not skipping anything
-                if (length < 0)
-                { await ParseLong(async).ConfigureAwait(false); length = -length; }
-                while (length-- > 0)
-#pragma warning disable AZC0110 // DO NOT use await keyword in possibly synchronous scope.
-                    list.Add(await itemParser(async, this).ConfigureAwait(false));
-#pragma warning restore AZC0110 // DO NOT use await keyword in possibly synchronous scope.
+                read = async ?
+                    await stream.ReadAsync(data, read, length, cancellationToken).ConfigureAwait(false) :
+                    stream.Read(data, read, length);
+                if (read <= 0) throw new InvalidOperationException("Unexpected end of input.");
             }
-            return list;
+            return data;
         }
 
-        private async Task<long> ZigZag(bool async)
+        private static async Task<byte> ReadByteAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken)
         {
-            byte b = await ReadByte(async).ConfigureAwait(false);
+            byte[] bytes = await ReadFixedBytesAsync(stream, 1, async, cancellationToken).ConfigureAwait(false);
+            return bytes[0];
+        }
+
+        // Stolen because the linked references in the Avro spec were subpar...
+        private static async Task<long> ReadZigZagLongAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken)
+        {
+            byte b = await ReadByteAsync(stream, async, cancellationToken).ConfigureAwait(false);
             ulong next = b & 0x7FUL;
             int shift = 7;
             while ((b & 0x80) != 0)
             {
-                b = await ReadByte(async).ConfigureAwait(false);
+                b = await ReadByteAsync(stream, async, cancellationToken).ConfigureAwait(false);
                 next |= (b & 0x7FUL) << shift;
                 shift += 7;
             }
@@ -99,61 +109,153 @@ namespace Azure.Storage.Internal.Avro
             return (-(value & 0x01L)) ^ ((value >> 1) & 0x7fffffffffffffffL);
         }
 
-        private static Task<object> ParseNull(bool async)
+        public static Task<object> ReadNullAsync() => Task.FromResult<object>(null);
+
+        public static async Task<bool> ReadBoolAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken)
         {
-            // I know this is dumb.  I had to use the async parameter, or I couldn't build,
-            // even after suppressing the rule.
-            if (async)
-            {
-                return Task.FromResult((object)null);
-            }
-            else
-            {
-                return Task.FromResult((object)null);
-            }
+            byte b = await ReadByteAsync(stream, async, cancellationToken).ConfigureAwait(false);
+            return b != 0;
         }
 
-        private async Task<bool> ParseBool(bool async)
+        public static async Task<long> ReadLongAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken) =>
+            await ReadZigZagLongAsync(stream, async, cancellationToken).ConfigureAwait(false);
+
+        public static async Task<int> ReadIntAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken) =>
+            (int)(await ReadLongAsync(stream, async, cancellationToken).ConfigureAwait(false));
+
+        public static async Task<float> ReadFloatAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken)
         {
-            byte data = await ReadByte(async).ConfigureAwait(false);
-            return data != 0;
+            byte[] bytes = await ReadFixedBytesAsync(stream, 4, async, cancellationToken).ConfigureAwait(false);
+            return BitConverter.ToSingle(bytes, 0);
         }
 
-        public async Task<long> ParseLong(bool async)
-            => await ZigZag(async).ConfigureAwait(false);
-
-        private async Task<int> ParseInt(bool async)
+        public static async Task<double> ReadDoubleAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken)
         {
-            long data = await ParseLong(async).ConfigureAwait(false);
-            return (int)data;
+            byte[] bytes = await ReadFixedBytesAsync(stream, 8, async, cancellationToken).ConfigureAwait(false);
+            return BitConverter.ToDouble(bytes, 0);
         }
 
-        private async Task<float> ParseFloat(bool async)
+        public static async Task<byte[]> ReadBytesAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken)
         {
-            byte[] data = await ReadBytes(async, 4).ConfigureAwait(false);
-            return BitConverter.ToSingle(data, 0);
+            int size = await ReadIntAsync(stream, async, cancellationToken).ConfigureAwait(false);
+            return await ReadFixedBytesAsync(stream, size, async, cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task<double> ParseDouble(bool async)
+        public static async Task<string> ReadStringAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken)
         {
-            byte[] data = await ReadBytes(async, 8).ConfigureAwait(false);
-            return BitConverter.ToDouble(data, 0);
-        }
-
-        public async Task<byte[]> ParseBytes(bool async)
-        {
-            int length = await ParseInt(async).ConfigureAwait(false);
-            return await ReadBytes(async, length).ConfigureAwait(false);
-        }
-
-        public async Task<string> ParseString(bool async)
-        {
-            int length = await ParseInt(async).ConfigureAwait(false);
-            byte[] bytes = await ReadBytes(async, length).ConfigureAwait(false);
+            byte[] bytes = await ReadBytesAsync(stream, async, cancellationToken).ConfigureAwait(false);
             return Encoding.UTF8.GetString(bytes);
         }
 
-        public Parser BuildParser(JsonElement schema)
+        private static async Task<KeyValuePair<string, T>> ReadMapPairAsync<T>(
+            Stream stream,
+            Func<Stream, bool, CancellationToken, Task<T>> parseItemAsync,
+            bool async,
+            CancellationToken cancellationToken)
+        {
+            string key = await ReadStringAsync(stream, async, cancellationToken).ConfigureAwait(false);
+            #pragma warning disable AZC0110 // DO NOT use await keyword in possibly synchronous scope.
+            T value = await parseItemAsync(stream, async, cancellationToken).ConfigureAwait(false);
+            #pragma warning restore AZC0110 // DO NOT use await keyword in possibly synchronous scope.
+            return new KeyValuePair<string, T>(key, value);
+        }
+
+        public static async Task<Dictionary<string, T>> ReadMapAsync<T>(
+            Stream stream,
+            Func<Stream, bool, CancellationToken, Task<T>> parseItemAsync,
+            bool async,
+            CancellationToken cancellationToken)
+        {
+            #pragma warning disable AZC0110 // DO NOT use await keyword in possibly synchronous scope.
+            #pragma warning disable AZC0108 // Incorrect 'async' parameter value.
+            Func<Stream, bool, CancellationToken, Task<KeyValuePair<string, T>>> parsePair =
+                async (s, a, c) => await ReadMapPairAsync(s, parseItemAsync, a, c).ConfigureAwait(false);
+            #pragma warning restore AZC0108 // Incorrect 'async' parameter value.
+            #pragma warning restore AZC0110 // DO NOT use await keyword in possibly synchronous scope.
+            IEnumerable<KeyValuePair<string, T>> entries =
+                await ReadArrayAsync(stream, parsePair, async, cancellationToken).ConfigureAwait(false);
+            return entries.ToDictionary();
+        }
+
+        private static async Task<IEnumerable<T>> ReadArrayAsync<T>(
+            Stream stream,
+            Func<Stream, bool, CancellationToken, Task<T>> parseItemAsync,
+            bool async,
+            CancellationToken cancellationToken)
+        {
+            // TODO: This is unpleasant, but I don't want to switch everything to IAsyncEnumerable for every array
+            List<T> items = new List<T>();
+            for (long length = await ReadLongAsync(stream, async, cancellationToken).ConfigureAwait(false);
+                 length != 0;
+                 length = await ReadLongAsync(stream, async, cancellationToken).ConfigureAwait(false))
+            {
+                // Ignore block sizes because we're not skipping anything
+                if (length < 0)
+                {
+                    await ReadLongAsync(stream, async, cancellationToken).ConfigureAwait(false);
+                    length = -length;
+                }
+                while (length-- > 0)
+                {
+                    #pragma warning disable AZC0110 // DO NOT use await keyword in possibly synchronous scope.
+                    T item = await parseItemAsync(stream, async, cancellationToken).ConfigureAwait(false);
+                    #pragma warning restore AZC0110 // DO NOT use await keyword in possibly synchronous scope.
+                    items.Add(item);
+                };
+            }
+            return items;
+        }
+
+        internal static List<T> Map<T>(this JsonElement array, Func<JsonElement, T> selector)
+        {
+            var values = new List<T>();
+            foreach (JsonElement element in array.EnumerateArray())
+            {
+                values.Add(selector(element));
+            }
+            return values;
+        }
+
+        internal static Dictionary<string, T> ToDictionary<T>(this IEnumerable<KeyValuePair<string, T>> values)
+        {
+            Dictionary<string, T> dict = new Dictionary<string, T>();
+            foreach (KeyValuePair<string, T> pair in values)
+            {
+                dict[pair.Key] = pair.Value;
+            }
+            return dict;
+        }
+    }
+
+    internal abstract class AvroType
+    {
+        public abstract Task<object> ReadAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken);
+
+        public static AvroType FromSchema(JsonElement schema)
         {
             switch (schema.ValueKind)
             {
@@ -164,33 +266,28 @@ namespace Azure.Storage.Internal.Avro
                         switch (type)
                         {
                             case "null":
-                                return (Parser)(async (async, p) => await ParseNull(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.Null };
                             case "boolean":
-                                return (Parser)(async (async, p) => await p.ParseBool(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.Boolean };
                             case "int":
-                                return (Parser)(async (async, p) => await p.ParseInt(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.Int };
                             case "long":
-                                return (Parser)(async (async, p) => await p.ParseLong(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.Long };
                             case "float":
-                                return (Parser)(async (async, p) => await p.ParseFloat(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.Float };
                             case "double":
-                                return (Parser)(async (async, p) => await p.ParseDouble(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.Double };
                             case "bytes":
-                                return (Parser)(async (async, p) => await p.ParseBytes(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.Bytes };
                             case "string":
-                                return (Parser)(async (async, p) => await p.ParseString(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.String };
                             default:
                                 throw new InvalidOperationException($"Unexpected Avro type {type} in {schema}");
                         }
                     }
                 // Union types
                 case JsonValueKind.Array:
-                    {
-                        List<Parser> parsers = SelectArray(schema, BuildParser);
-#pragma warning disable AZC0109 // Misuse of 'async' parameter.
-                        return (Parser)(async (async, p) => parsers[await p.ParseInt(async).ConfigureAwait(false)](async, p));
-#pragma warning restore AZC0109 // Misuse of 'async' parameter.
-                    }
+                    return new AvroUnionType { Types = schema.Map(FromSchema) };
                 // Everything else
                 case JsonValueKind.Object:
                     {
@@ -199,58 +296,35 @@ namespace Azure.Storage.Internal.Avro
                         {
                             // Primitives can be defined as strings or objects
                             case "null":
-                                return (Parser)(async (async, p) => await ParseNull(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.Null };
                             case "boolean":
-                                return (Parser)(async (async, p) => await p.ParseBool(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.Boolean };
                             case "int":
-                                return (Parser)(async (async, p) => await p.ParseInt(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.Int };
                             case "long":
-                                return (Parser)(async (async, p) => await p.ParseLong(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.Long };
                             case "float":
-                                return (Parser)(async (async, p) => await p.ParseFloat(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.Float };
                             case "double":
-                                return (Parser)(async (async, p) => await p.ParseDouble(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.Double };
                             case "bytes":
-                                return (Parser)(async (async, p) => await p.ParseBytes(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.Bytes };
                             case "string":
-                                return (Parser)(async (async, p) => await p.ParseString(async).ConfigureAwait(false));
+                                return new AvroPrimitiveType { Primitive = AvroPrimitive.String };
                             case "record":
+                                if (schema.TryGetProperty("aliases", out var _)) throw new InvalidOperationException($"Unexpected aliases on {schema}");
+                                string name = schema.GetProperty("name").GetString();
+                                Dictionary<string, AvroType> fields = new Dictionary<string, AvroType>();
+                                foreach (JsonElement field in schema.GetProperty("fields").EnumerateArray())
                                 {
-                                    if (schema.TryGetProperty("aliases", out var _))
-                                        throw new InvalidOperationException($"Unexpected aliases on {schema}");
-                                    var fields = SelectArray(
-                                        schema.GetProperty("fields"),
-                                        f => new KeyValuePair<string, Parser>(
-                                            f.GetProperty("name").GetString(),
-                                            BuildParser(f.GetProperty("type")))).ToDictionary(p => p.Key, p => p.Value);
-                                    var name = schema.GetProperty("name").GetString();
-                                    return (Parser)(async (async, p) =>
-                                    {
-                                        Dictionary<string, object> record = new Dictionary<string, object>();
-                                        record["$schemaName"] = name;
-                                        foreach (KeyValuePair<string, Parser> field in fields)
-                                        {
-#pragma warning disable AZC0109 // Misuse of 'async' parameter.
-#pragma warning disable AZC0110 // DO NOT use await keyword in possibly synchronous scope.
-                                            record[field.Key] = await field.Value(async, p).ConfigureAwait(false);
-#pragma warning restore AZC0110 // DO NOT use await keyword in possibly synchronous scope.
-#pragma warning restore AZC0109 // Misuse of 'async' parameter.
-                                        }
-                                        return record;
-                                    });
+                                    fields[field.GetProperty("name").GetString()] = FromSchema(field.GetProperty("type"));
                                 }
+                                return new AvroRecordType { Schema = name, Fields = fields };
                             case "enum":
-                                {
-                                    if (schema.TryGetProperty("aliases", out var _))
-                                        throw new InvalidOperationException($"Unexpected aliases on {schema}");
-                                    List<string> symbols = SelectArray(schema.GetProperty("symbols"), s => s.GetString());
-                                    return (Parser)(async (async, p) => symbols[await p.ParseInt(async).ConfigureAwait(false)]);
-                                }
+                                if (schema.TryGetProperty("aliases", out var _)) throw new InvalidOperationException($"Unexpected aliases on {schema}");
+                                return new AvroEnumType { Symbols = schema.GetProperty("symbols").Map(s => s.GetString()) };
                             case "map":
-                                {
-                                    Parser values = BuildParser(schema.GetProperty("values"));
-                                    return (Parser)(async (async, p) => await p.ParseMap(async, values).ConfigureAwait(false));
-                                }
+                                return new AvroMapType { ItemType = FromSchema(schema.GetProperty("values")) };
                             case "array": // Unused today
                             case "union": // Unused today
                             case "fixed": // Unused today
@@ -262,15 +336,94 @@ namespace Azure.Storage.Internal.Avro
                     throw new InvalidOperationException($"Unexpected JSON Element: {schema}");
             }
         }
+    }
 
-        private static List<T> SelectArray<T>(JsonElement array, Func<JsonElement, T> selector)
-        {
-            var values = new List<T>();
-            foreach (JsonElement element in array.EnumerateArray())
+    internal enum AvroPrimitive { Null, Boolean, Int, Long, Float, Double, Bytes, String };
+
+    internal class AvroPrimitiveType : AvroType
+    {
+        public AvroPrimitive Primitive { get; set; }
+
+        public override async Task<object> ReadAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken) =>
+            Primitive switch
             {
-                values.Add(selector(element));
+                #pragma warning disable AZC0110 // DO NOT use await keyword in possibly synchronous scope.
+                AvroPrimitive.Null => await AvroParser.ReadNullAsync().ConfigureAwait(false),
+                #pragma warning restore AZC0110 // DO NOT use await keyword in possibly synchronous scope.
+                AvroPrimitive.Boolean => await AvroParser.ReadBoolAsync(stream, async, cancellationToken).ConfigureAwait(false),
+                AvroPrimitive.Int => await AvroParser.ReadIntAsync(stream, async, cancellationToken).ConfigureAwait(false),
+                AvroPrimitive.Long => await AvroParser.ReadLongAsync(stream, async, cancellationToken).ConfigureAwait(false),
+                AvroPrimitive.Float => await AvroParser.ReadFloatAsync(stream, async, cancellationToken).ConfigureAwait(false),
+                AvroPrimitive.Double => await AvroParser.ReadDoubleAsync(stream, async, cancellationToken).ConfigureAwait(false),
+                AvroPrimitive.Bytes => await AvroParser.ReadBytesAsync(stream, async, cancellationToken).ConfigureAwait(false),
+                AvroPrimitive.String => await AvroParser.ReadStringAsync(stream, async, cancellationToken).ConfigureAwait(false),
+                _ => throw new InvalidOperationException("Unknown Avro Primitive!")
+            };
+    }
+
+    internal class AvroEnumType : AvroType
+    {
+        public IReadOnlyList<string> Symbols { get; set; }
+
+        public override async Task<object> ReadAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken)
+        {
+            int value = await AvroParser.ReadIntAsync(stream, async, cancellationToken).ConfigureAwait(false);
+            return Symbols[value];
+        }
+    }
+
+    internal class AvroUnionType : AvroType
+    {
+        public IReadOnlyList<AvroType> Types { get; set; }
+
+        public override async Task<object> ReadAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken)
+        {
+            int option = await AvroParser.ReadIntAsync(stream, async, cancellationToken).ConfigureAwait(false);
+            return await Types[option].ReadAsync(stream, async, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    internal class AvroMapType : AvroType
+    {
+        public AvroType ItemType { get; set; }
+
+        public override async Task<object> ReadAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken)
+        {
+            Func<Stream, bool, CancellationToken, Task<object>> parseItemAsync =
+                async (s, a, c) => await ItemType.ReadAsync(s, a, c).ConfigureAwait(false);
+            return await AvroParser.ReadMapAsync(stream, parseItemAsync, async, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    internal class AvroRecordType : AvroType
+    {
+        public string Schema { get; set; }
+        public IReadOnlyDictionary<string, AvroType> Fields { get; set; }
+
+        public override async Task<object> ReadAsync(
+            Stream stream,
+            bool async,
+            CancellationToken cancellationToken)
+        {
+            Dictionary<string, object> record = new Dictionary<string, object>();
+            record["$schema"] = Schema;
+            foreach (KeyValuePair<string, AvroType> field in Fields)
+            {
+                record[field.Key] = await field.Value.ReadAsync(stream, async, cancellationToken).ConfigureAwait(false);
             }
-            return values;
+            return record;
         }
     }
 }

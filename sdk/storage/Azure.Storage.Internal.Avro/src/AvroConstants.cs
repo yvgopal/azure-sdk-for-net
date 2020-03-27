@@ -10,7 +10,6 @@ namespace Azure.Storage.Internal.Avro
     internal class AvroConstants
     {
         public const int SyncMarkerSize = 16;
-        public const int InitBytesLength = 4;
         public static byte[] InitBytes =
         {
             (byte)'O',

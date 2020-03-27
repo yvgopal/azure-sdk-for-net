@@ -5,85 +5,72 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using AsyncParser = System.Func<bool, Azure.Storage.Internal.Avro.AvroParser, System.Threading.Tasks.Task<object>>;
 using System.Text.Json;
-using Azure.Core.Pipeline;
+using System.Threading;
 
 namespace Azure.Storage.Internal.Avro
 {
     internal class AvroReader
     {
         private Stream _stream;
-        private AvroParser _parser;
-        private AsyncParser _asyncParserFunction;
         private byte[] _syncMarker;
         private Dictionary<string, string> _metadata;
+        private AvroType _itemType;
         private long _itemsRemainingInCurrentBlock;
         private bool _initalized;
 
         public AvroReader(Stream stream)
         {
             _stream = stream;
-            _parser = new AvroParser(stream);
             _metadata = new Dictionary<string, string>();
             _initalized = false;
         }
 
-        private async Task Initalize(bool async)
+        private async Task Initalize(bool async, CancellationToken cancellationToken = default)
         {
-            // Get and validate initBytes
-            byte[] initBytes = await _parser.ReadBytes(async, AvroConstants.InitBytesLength).ConfigureAwait(false);
-
-
-            if (!initBytes.SequenceEqual(AvroConstants.InitBytes))
+            // Four bytes, ASCII 'O', 'b', 'j', followed by 1.
+            byte[] header = await AvroParser.ReadFixedBytesAsync(_stream, AvroConstants.InitBytes.Length, async, cancellationToken).ConfigureAwait(false);
+            if (!header.SequenceEqual(AvroConstants.InitBytes))
             {
                 throw new ArgumentException("Stream is not an Avro file.");
             }
 
-            // Get metadata
-            _metadata = await _parser.ParseMap<string>(async, async (async, p) =>
-                await p.ParseString(async).ConfigureAwait(false)).ConfigureAwait(false);
-
-
-            // Get sync marker
-            _syncMarker = await _parser.ReadBytes(async, AvroConstants.SyncMarkerSize).ConfigureAwait(false);
-
+            // File metadata is written as if defined by the following map schema:
+            // { "type": "map", "values": "bytes"}
+            _metadata = await AvroParser.ReadMapAsync(_stream, AvroParser.ReadStringAsync, async, cancellationToken).ConfigureAwait(false);
 
             // Validate codec
             _metadata.TryGetValue(AvroConstants.CodecKey, out string codec);
-
             if (codec == AvroConstants.DeflateCodec)
             {
                 throw new ArgumentException("Deflate codec is not supported");
             }
 
-            // Build parser functions
-            using JsonDocument schema = JsonDocument.Parse(_metadata[AvroConstants.SchemaKey]);
+            // The 16-byte, randomly-generated sync marker for this file.
+            _syncMarker = await AvroParser.ReadFixedBytesAsync(_stream, AvroConstants.SyncMarkerSize, async, cancellationToken).ConfigureAwait(false);
 
-             _asyncParserFunction = _parser.BuildParser(schema.RootElement);
+            // Parse the schema
+            using JsonDocument schema = JsonDocument.Parse(_metadata[AvroConstants.SchemaKey]);
+            _itemType = AvroType.FromSchema(schema.RootElement);
 
             // Populate _itemsRemainingInCurrentBlock
-            _itemsRemainingInCurrentBlock = await _parser.ParseLong(async).ConfigureAwait(false);
+            _itemsRemainingInCurrentBlock = await AvroParser.ReadLongAsync(_stream, async, cancellationToken).ConfigureAwait(false);
+
             // skip block length
-            await _parser.ParseLong(async).ConfigureAwait(false);
+            await AvroParser.ReadLongAsync(_stream, async, cancellationToken).ConfigureAwait(false);
+
             _initalized = true;
         }
 
-        public async Task<Dictionary<string, object>> Next(bool async)
+        public bool HasNext() => !_initalized || _itemsRemainingInCurrentBlock > 0;
+
+        public async Task<Dictionary<string, object>> Next(bool async, CancellationToken cancellationToken = default)
         {
-            // Initalize AvroReader, if necessary.
+            // Initialize AvroReader, if necessary.
             if (!_initalized)
             {
-                if (async)
-                {
-                    await Initalize(async: true).ConfigureAwait(false);
-                }
-                else
-                {
-                    Initalize(async: false).EnsureCompleted();
-                }
+                await Initalize(async, cancellationToken).ConfigureAwait(false);
             }
 
             if (!HasNext())
@@ -91,19 +78,22 @@ namespace Azure.Storage.Internal.Avro
                 throw new ArgumentException("There are no more items in the stream");
             }
 
-#pragma warning disable AZC0110 // DO NOT use await keyword in possibly synchronous scope.
-            object result = await _asyncParserFunction(async, _parser).ConfigureAwait(false);
-#pragma warning restore AZC0110 // DO NOT use await keyword in possibly synchronous scope.
+
+            object result = await _itemType.ReadAsync(_stream, async, cancellationToken).ConfigureAwait(false);
+
             _itemsRemainingInCurrentBlock--;
 
             if (_itemsRemainingInCurrentBlock == 0)
             {
-                // Skip sync marker
-                await _parser.ReadBytes(async, 16).ConfigureAwait(false);
+                byte[] marker = await AvroParser.ReadFixedBytesAsync(_stream, 16, async, cancellationToken).ConfigureAwait(false);
+                if (!_syncMarker.SequenceEqual(marker))
+                {
+                    throw new ArgumentException("Stream is not a valid Avro file.");
+                }
 
                 try
                 {
-                    _itemsRemainingInCurrentBlock = await _parser.ParseLong(async).ConfigureAwait(false);
+                    _itemsRemainingInCurrentBlock = await AvroParser.ReadLongAsync(_stream, async, cancellationToken).ConfigureAwait(false);
                 }
                 catch (InvalidOperationException)
                 {
@@ -113,22 +103,11 @@ namespace Azure.Storage.Internal.Avro
                 if (_itemsRemainingInCurrentBlock > 0)
                 {
                     // Ignore block size
-                    await _parser.ParseLong(async).ConfigureAwait(false);
+                    await AvroParser.ReadLongAsync(_stream, async, cancellationToken).ConfigureAwait(false);
                 }
             }
 
             return (Dictionary<string, object>)result;
-        }
-
-        public bool HasNext()
-        {
-            if (!_initalized
-                || _itemsRemainingInCurrentBlock > 0)
-            {
-                return true;
-            }
-
-            return false;
         }
     }
 }
