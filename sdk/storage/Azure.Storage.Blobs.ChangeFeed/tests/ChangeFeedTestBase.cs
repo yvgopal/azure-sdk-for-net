@@ -2,9 +2,12 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Azure.Core;
 using Azure.Core.Testing;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Azure.Storage.Test.Shared;
 
 namespace Azure.Storage.Blobs.ChangeFeed.Tests
@@ -18,6 +21,9 @@ namespace Azure.Storage.Blobs.ChangeFeed.Tests
             : base(async, RecordedTestMode.Live)
         {
         }
+
+        public string GetNewContainerName() => $"test-container-{Recording.Random.NewGuid()}";
+        public string GetNewBlobName() => $"test-blob-{Recording.Random.NewGuid()}";
 
         public BlobServiceClient GetServiceClient_SharedKey()
             => InstrumentClient(
@@ -48,6 +54,53 @@ namespace Azure.Storage.Blobs.ChangeFeed.Tests
             }
 
             return Recording.InstrumentClientOptions(options);
+        }
+
+        public async Task<DisposingContainer> GetTestContainerAsync(
+            BlobServiceClient service = default,
+            string containerName = default,
+            IDictionary<string, string> metadata = default,
+            PublicAccessType? publicAccessType = default,
+            bool premium = default)
+        {
+
+            containerName ??= GetNewContainerName();
+            service ??= GetServiceClient_SharedKey();
+
+            if (publicAccessType == default)
+            {
+                publicAccessType = premium ? PublicAccessType.None : PublicAccessType.BlobContainer;
+            }
+
+            BlobContainerClient container = InstrumentClient(service.GetBlobContainerClient(containerName));
+            await container.CreateAsync(metadata: metadata, publicAccessType: publicAccessType.Value);
+            return new DisposingContainer(container);
+        }
+
+        public class DisposingContainer : IAsyncDisposable
+        {
+            public BlobContainerClient Container;
+
+            public DisposingContainer(BlobContainerClient client)
+            {
+                Container = client;
+            }
+
+            public async ValueTask DisposeAsync()
+            {
+                if (Container != null)
+                {
+                    try
+                    {
+                        await Container.DeleteAsync();
+                        Container = null;
+                    }
+                    catch
+                    {
+                        // swallow the exception to avoid hiding another test failure
+                    }
+                }
+            }
         }
     }
 }

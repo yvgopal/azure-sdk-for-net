@@ -54,7 +54,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
             _blobClient = containerClient.GetBlobClient(chunkPath);
             _isInitialized = false;
             EventIndex = eventIndex ?? 0;
-            _stream = new LazyLoadingBlobStream(_blobClient, offset: 0, blockSize: 1000);
+            _stream = new LazyLoadingBlobStream(_blobClient, offset: 0, blockSize: Constants.ChangeFeed.ChunkBlockDownloadSize);
         }
 
         //TODO need to figure out how to not download the entire chunk
