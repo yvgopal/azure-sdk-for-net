@@ -330,6 +330,11 @@ namespace Azure.Storage
             public const string InitalizationManifestPath = "/0000/";
             public const string InitalizationSegment = "1601";
             public const string MetaSegmentsPath = "meta/segments.json";
+
+            internal static class Errors
+            {
+                public const string NegativeParameterError = "Must be positive";
+            }
         }
 
         /// <summary>

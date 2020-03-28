@@ -12,7 +12,7 @@ using Azure.Storage.Blobs.ChangeFeed.Models;
 
 namespace Azure.Storage.Blobs.ChangeFeed
 {
-    internal class Shard
+    internal class Shard : IDisposable
     {
         /// <summary>
         /// Container Client for listing Chunks.
@@ -143,5 +143,8 @@ namespace Azure.Storage.Blobs.ChangeFeed
             }
             return changeFeedEvent;
         }
+
+        /// <inheritdoc/>
+        public void Dispose() => _currentChunk.Dispose();
     }
 }

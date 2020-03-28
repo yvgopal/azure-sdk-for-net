@@ -17,7 +17,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
     /// <summary>
     /// Chunk.
     /// </summary>
-    internal class Chunk
+    internal class Chunk : IDisposable
     {
         /// <summary>
         /// Blob Client for downloading the Chunk.
@@ -41,6 +41,11 @@ namespace Azure.Storage.Blobs.ChangeFeed
         /// </summary>
         private bool _isInitialized;
 
+        /// <summary>
+        /// Underlying stream.
+        /// </summary>
+        private LazyLoadingBlobStream _stream;
+
         public Chunk(
             BlobContainerClient containerClient,
             string chunkPath,
@@ -49,6 +54,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
             _blobClient = containerClient.GetBlobClient(chunkPath);
             _isInitialized = false;
             EventIndex = eventIndex ?? 0;
+            _stream = new LazyLoadingBlobStream(_blobClient, offset: 0, blockSize: 1000);
         }
 
         //TODO need to figure out how to not download the entire chunk
@@ -56,18 +62,8 @@ namespace Azure.Storage.Blobs.ChangeFeed
         private async Task Initalize(
             bool async)
         {
-            Response<BlobDownloadInfo> response;
-            if (async)
-            {
-                 response = await _blobClient.DownloadAsync().ConfigureAwait(false);
-            }
-            else
-            {
-                response = _blobClient.Download();
-            }
-
             _isInitialized = true;
-            _avroReader = new AvroReader(response.Value.Content);
+            _avroReader = new AvroReader(_stream);
 
             // Fast forward to next event.
             //TODO this won't work if we decide to only download part of the Chunck.
@@ -110,5 +106,8 @@ namespace Azure.Storage.Blobs.ChangeFeed
             EventIndex++;
             return new BlobChangeFeedEvent(result);
         }
+
+        /// <inheritdoc/>
+        public void Dispose() => _stream.Dispose();
     }
 }
