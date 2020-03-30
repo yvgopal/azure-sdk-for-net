@@ -53,7 +53,9 @@ namespace Azure.Storage.Queues
         public virtual Azure.Response SetMetadata(System.Collections.Generic.IDictionary<string, string> metadata, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) { throw null; }
         public virtual System.Threading.Tasks.Task<Azure.Response> SetMetadataAsync(System.Collections.Generic.IDictionary<string, string> metadata, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) { throw null; }
         protected virtual string TransformMessageDownload(string downloadedMessage, System.Threading.CancellationToken cancellationToken) { throw null; }
+        protected virtual System.Threading.Tasks.Task<string> TransformMessageDownloadAsync(string downloadedMessage, System.Threading.CancellationToken cancellationToken) { throw null; }
         protected virtual string TransformMessageUpload(string messageToUpload, System.Threading.CancellationToken cancellationToken) { throw null; }
+        protected virtual System.Threading.Tasks.Task<string> TransformMessageUploadAsync(string messageToUpload, System.Threading.CancellationToken cancellationToken) { throw null; }
         public virtual Azure.Response<Azure.Storage.Queues.Models.UpdateReceipt> UpdateMessage(string messageId, string popReceipt, string messageText = null, System.TimeSpan visibilityTimeout = default(System.TimeSpan), System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) { throw null; }
         public virtual System.Threading.Tasks.Task<Azure.Response<Azure.Storage.Queues.Models.UpdateReceipt>> UpdateMessageAsync(string messageId, string popReceipt, string messageText = null, System.TimeSpan visibilityTimeout = default(System.TimeSpan), System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) { throw null; }
     }

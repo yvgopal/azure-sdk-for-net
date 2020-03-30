@@ -8,7 +8,9 @@ namespace Azure.Storage.Queues.Specialized
         public EncryptedQueueClient(System.Uri queueUri, Azure.Storage.Common.Cryptography.ClientsideEncryptionOptions encryptionOptions, Azure.Storage.Queues.QueueClientOptions options = null) { }
         public EncryptedQueueClient(System.Uri queueUri, Azure.Storage.StorageSharedKeyCredential credential, Azure.Storage.Common.Cryptography.ClientsideEncryptionOptions encryptionOptions, Azure.Storage.Queues.QueueClientOptions options = null) { }
         protected override string TransformMessageDownload(string downloadedMessage, System.Threading.CancellationToken cancellationToken) { throw null; }
+        protected override System.Threading.Tasks.Task<string> TransformMessageDownloadAsync(string downloadedMessage, System.Threading.CancellationToken cancellationToken) { throw null; }
         protected override string TransformMessageUpload(string messageToUpload, System.Threading.CancellationToken cancellationToken) { throw null; }
+        protected override System.Threading.Tasks.Task<string> TransformMessageUploadAsync(string messageToUpload, System.Threading.CancellationToken cancellationToken) { throw null; }
     }
     public static partial class SpecializedQueueExtensions
     {
