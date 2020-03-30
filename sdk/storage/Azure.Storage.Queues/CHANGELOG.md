@@ -1,5 +1,8 @@
 # Release History
 
+## 12.4.0-preview.2
+- Misc bug fixes to 12.4.0-preview.1.
+
 ## 12.4.0-preview.1
 - Support for Azure.Storage.Queues.Cryptography.
 

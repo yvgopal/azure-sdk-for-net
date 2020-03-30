@@ -1,5 +1,8 @@
 # Release History
 
+## 12.5.0-preview.2
+- Misc bug fixes for 12.5.0-preview.1.
+
 ## 12.5.0-preview.1
 - Support for Azure.Storage.Blobs.Cryptography.
 
