@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-namespace Azure.Storage.QuickQuery.Models
+namespace Azure.Storage.Blobs.Models
 {
     /// <summary>
     /// Interface for user-implemented handlers for <see cref="BlobQueryError"/>.

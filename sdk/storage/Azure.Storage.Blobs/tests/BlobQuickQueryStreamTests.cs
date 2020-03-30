@@ -6,11 +6,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Azure.Core.Testing;
-using Azure.Storage.QuickQuery.Models;
+using Azure.Storage.Blobs;
 using Azure.Storage.Test;
 using NUnit.Framework;
 
-namespace Azure.Storage.QuickQuery.Tests
+namespace Azure.Storage.Blobs.Test
 {
     public class BlobQuickQueryStreamTests
     {

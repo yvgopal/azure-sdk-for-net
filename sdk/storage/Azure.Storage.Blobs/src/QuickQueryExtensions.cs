@@ -4,38 +4,16 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Security;
 using System.Text;
-using Azure.Core.Pipeline;
-using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using Azure.Storage.Blobs.Specialized;
-using Azure.Storage.QuickQuery.Models;
 
-namespace Azure.Storage.QuickQuery
+namespace Azure.Storage.Blobs
 {
     /// <summary>
     /// Quick Query extensions.
     /// </summary>
-    public static class QuickQueryExtensions
+    internal static class QuickQueryExtensions
     {
-        /// <summary>
-        /// Gets a <see cref="BlobQuickQueryClient"/>.
-        /// </summary>
-        /// <param name="blockBlobClient"><see cref="BlobQuickQueryClient"/> associated with the
-        /// block blob.</param>
-        /// <returns>A <see cref="BlobQuickQueryClient"/>.</returns>
-        public static BlobQuickQueryClient GetQuickQueryClient(this BlockBlobClient blockBlobClient)
-        {
-            BlobClientOptions options = BlobClientInternals.GetClientOptions(blockBlobClient);
-            return new BlobQuickQueryClient(
-                uri: blockBlobClient.Uri,
-                pipeline: BlobClientInternals.GetHttpPipeline(blockBlobClient),
-                serviceVersion: options.Version,
-                clientDiagnostics: new ClientDiagnostics(options),
-                customerProvidedKey: BlobClientInternals.GetCustomerProvidedKey(blockBlobClient));
-        }
-
         internal static QuickQuerySerialization ToQuickQuerySerialization(
             this BlobQueryTextConfiguration textConfiguration)
         {
@@ -52,9 +30,9 @@ namespace Azure.Storage.QuickQuery
             serialization.Format.DelimitedTextConfiguration = default;
             serialization.Format.JsonTextConfiguration = default;
 
-            if (textConfiguration.GetType() == typeof(CsvTextConfiguration))
+            if (textConfiguration.GetType() == typeof(BlobQuickQueryCsvTextConfiguration))
             {
-                CsvTextConfiguration cvsTextConfiguration = textConfiguration as CsvTextConfiguration;
+                BlobQuickQueryCsvTextConfiguration cvsTextConfiguration = textConfiguration as BlobQuickQueryCsvTextConfiguration;
                 serialization.Format.Type = QuickQueryFormatType.Delimited;
                 serialization.Format.DelimitedTextConfiguration = new DelimitedTextConfigurationInternal
                 {
@@ -62,12 +40,12 @@ namespace Azure.Storage.QuickQuery
                     FieldQuote = cvsTextConfiguration.FieldQuote?.ToString(CultureInfo.InvariantCulture),
                     RecordSeparator = cvsTextConfiguration.RecordSeparator?.ToString(CultureInfo.InvariantCulture),
                     EscapeChar = cvsTextConfiguration.EscapeCharacter?.ToString(CultureInfo.InvariantCulture),
-                    HasHeaders = cvsTextConfiguration.HasHeaders
+                    HeadersPresent = cvsTextConfiguration.HasHeaders
                 };
             }
-            else if (textConfiguration.GetType() == typeof(JsonTextConfiguration))
+            else if (textConfiguration.GetType() == typeof(BlobQuickQueryJsonTextConfiguration))
             {
-                JsonTextConfiguration jsonTextConfiguration = textConfiguration as JsonTextConfiguration;
+                BlobQuickQueryJsonTextConfiguration jsonTextConfiguration = textConfiguration as BlobQuickQueryJsonTextConfiguration;
                 serialization.Format.Type = QuickQueryFormatType.Json;
                 serialization.Format.JsonTextConfiguration = new JsonTextConfigurationInternal
                 {
@@ -81,9 +59,6 @@ namespace Azure.Storage.QuickQuery
 
             return serialization;
         }
-
-        internal static Models.EncryptionAlgorithmType ToQuickQueryEncryptionAlgorithmType(this     Blobs.Models.EncryptionAlgorithmType blobEncryptionAlgorithmType)
-            => Models.EncryptionAlgorithmType.Aes256;
 
         internal static BlobDownloadInfo ToBlobDownloadInfo(this BlobQuickQueryResult quickQueryResult)
             => BlobsModelFactory.BlobDownloadInfo(
@@ -104,7 +79,7 @@ namespace Azure.Storage.QuickQuery
                 contentEncoding: quickQueryResult.ContentEncoding,
                 leaseStatus: (Blobs.Models.LeaseStatus)quickQueryResult.LeaseStatus,
                 //TODO this might be wrong
-                contentHash: quickQueryResult.ContentMD5,
+                contentHash: quickQueryResult.ContentHash,
                 acceptRanges: quickQueryResult.AcceptRanges,
                 eTag: quickQueryResult.ETag,
                 blobCommittedBlockCount: quickQueryResult.BlobCommittedBlockCount,

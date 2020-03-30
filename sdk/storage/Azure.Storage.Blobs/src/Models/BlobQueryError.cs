@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Azure.Storage.QuickQuery.Models
+namespace Azure.Storage.Blobs.Models
 {
     /// <summary>
     /// Blob query error.

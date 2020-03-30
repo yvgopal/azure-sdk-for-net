@@ -4,7 +4,7 @@
 using System;
 using Azure.Core.Pipeline;
 
-namespace Azure.Storage.QuickQuery.Models
+namespace Azure.Storage.Blobs.Models
 {
     /// <summary>
     /// Convert FailureNoContent into StorageRequestFailedExceptions.

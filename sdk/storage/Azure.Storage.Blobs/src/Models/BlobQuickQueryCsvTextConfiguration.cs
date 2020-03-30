@@ -5,12 +5,12 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Azure.Storage.QuickQuery.Models
+namespace Azure.Storage.Blobs.Models
 {
     /// <summary>
     /// CSV text configuration.
     /// </summary>
-    public class CsvTextConfiguration : BlobQueryTextConfiguration
+    public class BlobQuickQueryCsvTextConfiguration : BlobQueryTextConfiguration
     {
         /// <summary>
         /// Column separator.

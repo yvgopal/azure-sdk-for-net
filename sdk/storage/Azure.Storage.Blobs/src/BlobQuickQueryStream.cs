@@ -7,9 +7,9 @@ using System.IO;
 using System.Threading.Tasks;
 using Azure.Core.Pipeline;
 using Azure.Storage.Internal.Avro;
-using Azure.Storage.QuickQuery.Models;
+using Azure.Storage.Blobs.Models;
 
-namespace Azure.Storage.QuickQuery
+namespace Azure.Storage.Blobs
 {
     /// <summary>
     /// QuickQueryStream.

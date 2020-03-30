@@ -115,12 +115,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ApiCompat", "..\..\eng\ApiC
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Storage.Blobs.Batch.Samples.Tests", "Azure.Storage.Blobs.Batch\samples\Azure.Storage.Blobs.Batch.Samples.Tests.csproj", "{73F575E6-FA87-40B0-9D36-6D9FAAC1E1C1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Storage.QuickQuery", "Azure.Storage.QuickQuery\src\Azure.Storage.QuickQuery.csproj", "{661DBCFE-B6B5-4113-ADCF-C4A60722DE4C}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Storage.QuickQuery.Tests", "Azure.Storage.QuickQuery\tests\Azure.Storage.QuickQuery.Tests.csproj", "{802E7460-C563-4187-BE32-14C4D11D43AB}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Storage.QuickQuery.Samples.Tests", "Azure.Storage.QuickQuery\samples\Azure.Storage.QuickQuery.Samples.Tests.csproj", "{0D56F0AB-821B-4BB8-8CA6-603C3A2FAA5A}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Storage.Internal.Avro", "Azure.Storage.Internal.Avro\src\Azure.Storage.Internal.Avro.csproj", "{DF1229AC-BEA9-44B4-AA89-22AAFFC9F41B}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Storage.Internal.Avro.Tests", "Azure.Storage.Internal.Avro\tests\Azure.Storage.Internal.Avro.Tests.csproj", "{128BFB23-9EFD-4D19-BC85-AC1E8A3C1F5D}"
@@ -225,18 +219,6 @@ Global
 		{73F575E6-FA87-40B0-9D36-6D9FAAC1E1C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{73F575E6-FA87-40B0-9D36-6D9FAAC1E1C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{73F575E6-FA87-40B0-9D36-6D9FAAC1E1C1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{661DBCFE-B6B5-4113-ADCF-C4A60722DE4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{661DBCFE-B6B5-4113-ADCF-C4A60722DE4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{661DBCFE-B6B5-4113-ADCF-C4A60722DE4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{661DBCFE-B6B5-4113-ADCF-C4A60722DE4C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{802E7460-C563-4187-BE32-14C4D11D43AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{802E7460-C563-4187-BE32-14C4D11D43AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{802E7460-C563-4187-BE32-14C4D11D43AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{802E7460-C563-4187-BE32-14C4D11D43AB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0D56F0AB-821B-4BB8-8CA6-603C3A2FAA5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0D56F0AB-821B-4BB8-8CA6-603C3A2FAA5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0D56F0AB-821B-4BB8-8CA6-603C3A2FAA5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0D56F0AB-821B-4BB8-8CA6-603C3A2FAA5A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DF1229AC-BEA9-44B4-AA89-22AAFFC9F41B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DF1229AC-BEA9-44B4-AA89-22AAFFC9F41B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DF1229AC-BEA9-44B4-AA89-22AAFFC9F41B}.Release|Any CPU.ActiveCfg = Release|Any CPU

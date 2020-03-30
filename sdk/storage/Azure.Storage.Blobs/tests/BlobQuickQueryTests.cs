@@ -10,24 +10,22 @@ using System.Threading.Tasks;
 using Azure.Core.Testing;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
-using Azure.Storage.QuickQuery.Models;
 using Azure.Storage.Test;
+using Azure.Storage.Test.Shared;
 using NUnit.Framework;
 
-namespace Azure.Storage.QuickQuery.Tests
+namespace Azure.Storage.Blobs.Test
 {
-    public class BlobQuickQueryClientTests : QuickQueryTestBase
+    public class BlobQuickQueryTests : BlobTestBase
     {
-        public BlobQuickQueryClientTests(bool async) : this(async, null) { }
-
-        public BlobQuickQueryClientTests(bool async, RecordedTestMode? mode = null)
-            : base(async, mode) { }
-
-        public DateTimeOffset OldDate => Recording.Now.AddDays(-1);
-        public DateTimeOffset NewDate => Recording.Now.AddDays(1);
+        public BlobQuickQueryTests(bool async, BlobClientOptions.ServiceVersion serviceVersion)
+            : base(async, serviceVersion, RecordedTestMode.Live /* RecordedTestMode.Record /* to re-record */)
+        {
+        }
 
         [Test]
         //[Ignore("Recording framework doesn't play nicely with Avro")]
+        [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_Min()
         {
             // Arrange
@@ -37,9 +35,8 @@ namespace Azure.Storage.QuickQuery.Tests
             await blockBlobClient.UploadAsync(stream);
 
             // Act
-            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
             string query = @"SELECT _2 from BlobStorage WHERE _1 > 250;";
-            Response<BlobDownloadInfo> response =  await queryClient.QueryAsync(query);
+            Response<BlobDownloadInfo> response =  await blockBlobClient.QueryAsync(query);
 
             using StreamReader streamReader = new StreamReader(response.Value.Content);
             string s = await streamReader.ReadToEndAsync();
@@ -50,6 +47,7 @@ namespace Azure.Storage.QuickQuery.Tests
 
         [Test]
         //[Ignore("Recording framework doesn't play nicely with Avro")]
+        [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_Snapshot()
         {
             // Arrange
@@ -61,9 +59,8 @@ namespace Azure.Storage.QuickQuery.Tests
             BlockBlobClient snapshotClient = InstrumentClient(blockBlobClient.WithSnapshot(snapshotResponse.Value.Snapshot));
 
             // Act
-            BlobQuickQueryClient queryClient = snapshotClient.GetQuickQueryClient();
             string query = @"SELECT _2 from BlobStorage WHERE _1 > 250;";
-            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(query);
+            Response<BlobDownloadInfo> response = await snapshotClient.QueryAsync(query);
 
             using StreamReader streamReader = new StreamReader(response.Value.Content);
             string s = await streamReader.ReadToEndAsync();
@@ -74,26 +71,24 @@ namespace Azure.Storage.QuickQuery.Tests
 
         [Test]
         //[Ignore("Recording framework doesn't play nicely with Avro")]
+        [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_Error()
         {
             // Arrange
             await using DisposingContainer test = await GetTestContainerAsync();
             BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
-
-            // Act
-            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
             string query = @"SELECT _2 from BlobStorage WHERE _1 > 250;";
 
             // Act
-            // Act
             await TestHelper.AssertExpectedExceptionAsync<RequestFailedException>(
-                queryClient.QueryAsync(
+                blockBlobClient.QueryAsync(
                     query),
                 e => Assert.AreEqual("BlobNotFound", e.ErrorCode));
         }
 
         [Test]
         //[Ignore("Don't want to record 16 MB of data.")]
+        [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_MultipleDataRecords()
         {
             // Arrange
@@ -101,13 +96,11 @@ namespace Azure.Storage.QuickQuery.Tests
             BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
             Stream stream = CreateDataStream(16 * Constants.MB);
             await blockBlobClient.UploadAsync(stream);
-
-            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
             string query = @"SELECT * from BlobStorage";
 
             // Act
             TestProgress progressReporter = new TestProgress();
-            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(
+            Response<BlobDownloadInfo> response = await blockBlobClient.QueryAsync(
                 query,
                 progressReceiver: progressReporter);
 
@@ -133,6 +126,7 @@ namespace Azure.Storage.QuickQuery.Tests
 
         [Test]
         //[Ignore("Don't want to record 120 MB of data.")]
+        [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_Large()
         {
             // Arrange
@@ -140,13 +134,11 @@ namespace Azure.Storage.QuickQuery.Tests
             BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
             Stream stream = CreateDataStream(120 * Constants.MB);
             await blockBlobClient.UploadAsync(stream);
-
-            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
             string query = @"SELECT * from BlobStorage";
 
             // Act
             TestProgress progressReporter = new TestProgress();
-            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(
+            Response<BlobDownloadInfo> response = await blockBlobClient.QueryAsync(
                 query,
                 progressReceiver: progressReporter);
 
@@ -164,6 +156,7 @@ namespace Azure.Storage.QuickQuery.Tests
 
         [Test]
         //[Ignore("Recording framework doesn't play nicely with Avro")]
+        [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_Progress()
         {
             // Arrange
@@ -173,11 +166,10 @@ namespace Azure.Storage.QuickQuery.Tests
             await blockBlobClient.UploadAsync(stream);
 
             // Act
-            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
             string query = @"SELECT _2 from BlobStorage WHERE _1 > 250;";
             TestProgress progressReporter = new TestProgress();
 
-            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(
+            Response<BlobDownloadInfo> response = await blockBlobClient.QueryAsync(
                 query,
                 progressReceiver: progressReporter);
 
@@ -191,6 +183,7 @@ namespace Azure.Storage.QuickQuery.Tests
 
         [Test]
         //[Ignore("Recording framework doesn't play nicely with Avro")]
+        [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_QueryTextConfigurations()
         {
             await using DisposingContainer test = await GetTestContainerAsync();
@@ -199,10 +192,9 @@ namespace Azure.Storage.QuickQuery.Tests
             await blockBlobClient.UploadAsync(stream);
 
             // Act
-            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
             string query = @"SELECT _2 from BlobStorage WHERE _1 > 250;";
 
-            CsvTextConfiguration cvsTextConfiguration = new CsvTextConfiguration
+            BlobQuickQueryCsvTextConfiguration cvsTextConfiguration = new BlobQuickQueryCsvTextConfiguration
             {
                 ColumnSeparator = ",",
                 FieldQuote = '"',
@@ -211,13 +203,13 @@ namespace Azure.Storage.QuickQuery.Tests
                 HasHeaders = false
             };
 
-            JsonTextConfiguration jsonTextConfiguration = new JsonTextConfiguration
+            BlobQuickQueryJsonTextConfiguration jsonTextConfiguration = new BlobQuickQueryJsonTextConfiguration
             {
                 RecordSeparator = "\n"
             };
 
             // Act
-            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(
+            Response<BlobDownloadInfo> response = await blockBlobClient.QueryAsync(
                 query,
                 inputTextConfiguration: cvsTextConfiguration,
                 outputTextConfiguration: jsonTextConfiguration);
@@ -231,6 +223,7 @@ namespace Azure.Storage.QuickQuery.Tests
 
         [Test]
         //[Ignore("Recording framework doesn't play nicely with Avro")]
+        [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_NonFatalError()
         {
             // Arrange
@@ -240,12 +233,10 @@ namespace Azure.Storage.QuickQuery.Tests
             byte[] data = Encoding.UTF8.GetBytes("100,pizza,300,400\n300,400,500,600\n");
             using MemoryStream stream = new MemoryStream(data);
             await blockBlobClient.UploadAsync(stream);
-
-            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
             string query = @"SELECT _1 from BlobStorage WHERE _2 > 250;";
 
             // Act - with no IBlobQueryErrorReceiver
-            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(query);
+            Response<BlobDownloadInfo> response = await blockBlobClient.QueryAsync(query);
             using StreamReader streamReader = new StreamReader(response.Value.Content);
             string s = await streamReader.ReadToEndAsync();
 
@@ -259,7 +250,7 @@ namespace Azure.Storage.QuickQuery.Tests
                 Position = 0
             };
 
-            response = await queryClient.QueryAsync(
+            response = await blockBlobClient.QueryAsync(
                 query,
                 errorReceiver: new ErrorReceiver(expectedBlobQueryError));
             using StreamReader streamReader2 = new StreamReader(response.Value.Content);
@@ -268,6 +259,7 @@ namespace Azure.Storage.QuickQuery.Tests
 
         [Test]
         //[Ignore("Recording framework doesn't play nicely with Avro")]
+        [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_FatalError()
         {
             // Arrange
@@ -275,16 +267,14 @@ namespace Azure.Storage.QuickQuery.Tests
             BlockBlobClient blockBlobClient = InstrumentClient(test.Container.GetBlockBlobClient(GetNewBlobName()));
             Stream stream = CreateDataStream(Constants.KB);
             await blockBlobClient.UploadAsync(stream);
-
-            BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
             string query = @"SELECT * from BlobStorage;";
-            JsonTextConfiguration jsonTextConfiguration = new JsonTextConfiguration
+            BlobQuickQueryJsonTextConfiguration jsonTextConfiguration = new BlobQuickQueryJsonTextConfiguration
             {
                 RecordSeparator = "\n"
             };
 
             // Act - with no IBlobQueryErrorReceiver
-            Response<BlobDownloadInfo> response = await queryClient.QueryAsync(
+            Response<BlobDownloadInfo> response = await blockBlobClient.QueryAsync(
                 query,
                 inputTextConfiguration: jsonTextConfiguration);
             using StreamReader streamReader = new StreamReader(response.Value.Content);
@@ -299,7 +289,7 @@ namespace Azure.Storage.QuickQuery.Tests
                 Position = 0
             };
 
-            response = await queryClient.QueryAsync(
+            response = await blockBlobClient.QueryAsync(
                 query,
                 inputTextConfiguration: jsonTextConfiguration,
                 errorReceiver: new ErrorReceiver(expectedBlobQueryError));
@@ -310,6 +300,7 @@ namespace Azure.Storage.QuickQuery.Tests
 
         [Test]
         //[Ignore("Recording framework doesn't play nicely with Avro")]
+        [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_AccessConditions()
         {
             var garbageLeaseId = GetGarbageLeaseId();
@@ -327,11 +318,10 @@ namespace Azure.Storage.QuickQuery.Tests
                     parameters: parameters,
                     lease: true);
 
-                BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
                 string query = @"SELECT * from BlobStorage";
 
                 // Act
-                Response<BlobDownloadInfo> response = await queryClient.QueryAsync(
+                Response<BlobDownloadInfo> response = await blockBlobClient.QueryAsync(
                     query,
                     conditions: accessConditions);
 
@@ -342,6 +332,7 @@ namespace Azure.Storage.QuickQuery.Tests
 
         [Test]
         //[Ignore("Recording framework doesn't play nicely with Avro")]
+        [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_AccessConditionsFail()
         {
             var garbageLeaseId = GetGarbageLeaseId();
@@ -356,13 +347,11 @@ namespace Azure.Storage.QuickQuery.Tests
                 parameters.NoneMatch = await SetupBlobMatchCondition(blockBlobClient, parameters.NoneMatch);
                 BlobRequestConditions accessConditions = BuildAccessConditions(parameters);
 
-
-                BlobQuickQueryClient queryClient = blockBlobClient.GetQuickQueryClient();
                 string query = @"SELECT * from BlobStorage";
 
                 // Act
                 await TestHelper.AssertExpectedExceptionAsync<RequestFailedException>(
-                    queryClient.QueryAsync(
+                    blockBlobClient.QueryAsync(
                         query,
                         conditions: accessConditions),
                     e => { });

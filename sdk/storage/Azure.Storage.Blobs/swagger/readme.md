@@ -4,7 +4,7 @@
 ## Configuration
 ``` yaml
 # Generate blob storage
-input-file: https://raw.githubusercontent.com/Azure/azure-rest-api-specs/storage-dataplane-preview/specification/storage/data-plane/Microsoft.BlobStorage/preview/2019-07-07/blob.json
+input-file: https://raw.githubusercontent.com/Azure/azure-rest-api-specs/storage-dataplane-preview/specification/storage/data-plane/Microsoft.BlobStorage/preview/2019-12-12/blob.json
 output-folder: ../src/Generated
 clear-output-folder: false
 
@@ -1394,6 +1394,87 @@ directive:
     $.properties.Permissions.xml = { "name": "Permission"};
     delete $.properties.Permission;
     $.required = ["StartsOn", "ExpiresOn", "Permissions"];
+```
+
+### /{containerName}/{blob}?comp=query
+``` yaml
+directive:
+- from: swagger-document
+  where: $["x-ms-paths"]["/{containerName}/{blob}?comp=query"]
+  transform: >
+    $.post.responses.default = {
+        "description": "Failure",
+        "x-az-response-name": "FailureNoContent",
+        "x-az-create-exception": true,
+        "x-az-public": false,
+        "headers": { "x-ms-error-code": { "x-ms-client-name": "ErrorCode", "type": "string" } }
+    };
+```
+
+### Hide BlobQuickQueryResult
+``` yaml
+directive:
+- from: swagger-document
+  where: $["x-ms-paths"]["/{containerName}/{blob}?comp=query"]
+  transform: >
+    $.post.responses["200"]["x-az-public"] = false;
+    $.post.responses["206"]["x-az-public"] = false;
+```
+
+### Hide QueryRequest
+``` yaml
+directive:
+- from: swagger-document
+  where: definitions.QueryRequest
+  transform: >
+    $["x-az-public"] = false;
+```
+
+### Hide QuickQueryFormat
+``` yaml
+directive:
+- from: swagger-document
+  where: definitions.QuickQueryFormat
+  transform: >
+    $["x-az-public"] = false;
+```
+
+### Hide QuickQuerySerialization
+``` yaml
+directive:
+- from: swagger-document
+  where: definitions.QuickQuerySerialization
+  transform: >
+    $["x-az-public"] = false;
+```
+
+### Hide JsonTextConfiguration
+``` yaml
+directive:
+- from: swagger-document
+  where: definitions.JsonTextConfiguration
+  transform: >
+    $["x-az-public"] = false;
+    $["x-ms-client-name"] = "JsonTextConfigurationInternal";
+```
+
+### Hide DelimitedTextConfiguration
+``` yaml
+directive:
+- from: swagger-document
+  where: definitions.DelimitedTextConfiguration
+  transform: >
+    $["x-az-public"] = false;
+    $["x-ms-client-name"] = "DelimitedTextConfigurationInternal";
+```
+
+### Hide QuickQueryType
+``` yaml
+directive:
+- from: swagger-document
+  where: definitions.QuickQueryType
+  transform: >
+    $["x-az-public"] = false;
 ```
 
 ### Treat the API version as a parameter instead of a constant

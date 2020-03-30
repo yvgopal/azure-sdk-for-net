@@ -5,12 +5,12 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Azure.Storage.QuickQuery.Models
+namespace Azure.Storage.Blobs.Models
 {
     /// <summary>
     /// JSON text configuration.
     /// </summary>
-    public class JsonTextConfiguration : BlobQueryTextConfiguration
+    public class BlobQuickQueryJsonTextConfiguration : BlobQueryTextConfiguration
     {
     }
 }
