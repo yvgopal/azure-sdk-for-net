@@ -59,9 +59,8 @@ namespace Azure.Storage.Files.Shares
         /// </param>
         public ShareClientOptions(ServiceVersion version = LatestVersion)
         {
-            if (version == ServiceVersion.V2019_12_12
-                || version == ServiceVersion.V2019_07_07
-                || version == ServiceVersion.V2019_02_02)
+            if (ServiceVersion.V2019_02_02 <= version
+                && version <= LatestVersion)
             {
                 Version = version;
             }

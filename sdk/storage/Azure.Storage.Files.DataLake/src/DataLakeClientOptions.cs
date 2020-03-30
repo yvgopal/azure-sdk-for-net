@@ -62,9 +62,8 @@ namespace Azure.Storage.Files.DataLake
         /// </param>
         public DataLakeClientOptions(ServiceVersion version = LatestVersion)
         {
-            if (version == ServiceVersion.V2019_12_12
-                || version == ServiceVersion.V2019_07_07
-                || version == ServiceVersion.V2019_02_02)
+            if (ServiceVersion.V2019_02_02 <= version
+                && version <= LatestVersion)
             {
                 Version = version;
             }
