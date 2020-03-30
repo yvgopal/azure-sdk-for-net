@@ -10,7 +10,7 @@ namespace Azure.Storage.Blobs.Models
     /// <summary>
     /// JSON text configuration.
     /// </summary>
-    public class BlobQuickQueryJsonTextConfiguration : BlobQueryTextConfiguration
+    public class BlobQueryJsonTextConfiguration : BlobQueryTextConfiguration
     {
     }
 }

@@ -30,9 +30,9 @@ namespace Azure.Storage.Blobs
             serialization.Format.DelimitedTextConfiguration = default;
             serialization.Format.JsonTextConfiguration = default;
 
-            if (textConfiguration.GetType() == typeof(BlobQuickQueryCsvTextConfiguration))
+            if (textConfiguration.GetType() == typeof(BlobQueryCsvTextConfiguration))
             {
-                BlobQuickQueryCsvTextConfiguration cvsTextConfiguration = textConfiguration as BlobQuickQueryCsvTextConfiguration;
+                BlobQueryCsvTextConfiguration cvsTextConfiguration = textConfiguration as BlobQueryCsvTextConfiguration;
                 serialization.Format.Type = QuickQueryFormatType.Delimited;
                 serialization.Format.DelimitedTextConfiguration = new DelimitedTextConfigurationInternal
                 {
@@ -43,9 +43,9 @@ namespace Azure.Storage.Blobs
                     HeadersPresent = cvsTextConfiguration.HasHeaders
                 };
             }
-            else if (textConfiguration.GetType() == typeof(BlobQuickQueryJsonTextConfiguration))
+            else if (textConfiguration.GetType() == typeof(BlobQueryJsonTextConfiguration))
             {
-                BlobQuickQueryJsonTextConfiguration jsonTextConfiguration = textConfiguration as BlobQuickQueryJsonTextConfiguration;
+                BlobQueryJsonTextConfiguration jsonTextConfiguration = textConfiguration as BlobQueryJsonTextConfiguration;
                 serialization.Format.Type = QuickQueryFormatType.Json;
                 serialization.Format.JsonTextConfiguration = new JsonTextConfigurationInternal
                 {
