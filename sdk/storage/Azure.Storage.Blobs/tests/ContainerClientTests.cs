@@ -662,6 +662,7 @@ namespace Azure.Storage.Blobs.Test
         }
 
         [Test]
+        [Ignore("ignore")]
         public async Task DeleteIfExistsAsync()
         {
             // Arrange

@@ -23,6 +23,7 @@ namespace Azure.Storage.Blobs.ChangeFeed.Tests
         //TODO page size tests
 
         [Test]
+        [Ignore("Can't record avro")]
         public async Task Test()
         {
             BlobServiceClient service = GetServiceClient_SharedKey();
@@ -37,6 +38,7 @@ namespace Azure.Storage.Blobs.ChangeFeed.Tests
         }
 
         [Test]
+        [Ignore("Can't record avro")]
         public async Task CursorTest()
         {
             BlobServiceClient service = GetServiceClient_SharedKey();

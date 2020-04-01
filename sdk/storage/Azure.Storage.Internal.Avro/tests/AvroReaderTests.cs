@@ -13,6 +13,7 @@ namespace Azure.Storage.Internal.Avro.Tests
     public class AvroReaderTests
     {
         [Test]
+        [Ignore("Not recorded")]
         public async Task Test()
         {
             // Arrange

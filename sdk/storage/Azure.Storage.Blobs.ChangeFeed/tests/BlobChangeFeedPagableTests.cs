@@ -19,6 +19,7 @@ namespace Azure.Storage.Blobs.ChangeFeed.Tests
         }
 
         [Test]
+        [Ignore("Can't record avro")]
         public void Test()
         {
             BlobServiceClient service = GetServiceClient_SharedKey();

@@ -1241,6 +1241,7 @@ namespace Azure.Storage.Blobs.Test
         }
 
         [Test]
+        [Ignore("ignore")]
         public async Task DeleteIfExistsAsync()
         {
             await using DisposingContainer test = await GetTestContainerAsync();

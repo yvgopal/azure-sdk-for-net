@@ -19,6 +19,7 @@ namespace Azure.Storage.Blobs.ChangeFeed.Tests
         }
 
         [Test]
+        [Ignore("Not recorded")]
         public async Task ReadAsync()
         {
             // Arrange
