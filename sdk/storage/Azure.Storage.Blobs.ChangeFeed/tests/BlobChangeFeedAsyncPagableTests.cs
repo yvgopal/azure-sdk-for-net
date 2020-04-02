@@ -37,6 +37,27 @@ namespace Azure.Storage.Blobs.ChangeFeed.Tests
         }
 
         [Test]
+        public async Task PageSizeTest()
+        {
+            int pageSize = 100;
+            BlobServiceClient service = GetServiceClient_SharedKey();
+            BlobChangeFeedClient blobChangeFeedClient = service.GetChangeFeedClient();
+            IAsyncEnumerator<Page<BlobChangeFeedEvent>> asyncEnumerator
+                = blobChangeFeedClient.GetChangesAsync().AsPages(pageSizeHint: pageSize).GetAsyncEnumerator();
+            List<int> pageSizes = new List<int>();
+            while (await asyncEnumerator.MoveNextAsync())
+            {
+                pageSizes.Add(asyncEnumerator.Current.Values.Count);
+            }
+
+            // All pages except the last should have a count == pageSize.
+            for (int i = 0; i < pageSizes.Count - 1; i++)
+            {
+                Assert.AreEqual(pageSize, pageSizes[i]);
+            }
+        }
+
+        [Test]
         public async Task CursorTest()
         {
             BlobServiceClient service = GetServiceClient_SharedKey();
