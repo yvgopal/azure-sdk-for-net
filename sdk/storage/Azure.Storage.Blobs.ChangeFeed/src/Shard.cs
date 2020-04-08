@@ -3,10 +3,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
-using Azure.Core.Pipeline;
-using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.ChangeFeed.Models;
 
@@ -40,7 +37,14 @@ namespace Azure.Storage.Blobs.ChangeFeed
         private long _chunkIndex;
 
         /// <summary>
-        /// User provided Event Index.
+        /// The byte offset of the beginning of the
+        /// current Avro block.
+        /// </summary>
+        private long _blockOffset;
+
+        /// <summary>
+        /// Index of the current event within the
+        /// Avro block.
         /// </summary>
         private long _eventIndex;
 
@@ -59,6 +63,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
             _chunks = new Queue<string>();
             _isInitialized = false;
             _chunkIndex = shardCursor?.ChunkIndex ?? 0;
+            _blockOffset = shardCursor?.BlockOffset ?? 0;
             _eventIndex = shardCursor?.EventIndex ?? 0;
         }
 
@@ -100,13 +105,18 @@ namespace Azure.Storage.Blobs.ChangeFeed
                 }
             }
 
-            _currentChunk = new Chunk(_containerClient, _chunks.Dequeue(), _eventIndex);
+            _currentChunk = new Chunk(
+                _containerClient,
+                _chunks.Dequeue(),
+                _blockOffset,
+                _eventIndex);
             _isInitialized = true;
         }
 
         public BlobChangeFeedShardCursor GetCursor()
             => new BlobChangeFeedShardCursor(
                 _chunkIndex,
+                _currentChunk.BlockOffset,
                 _currentChunk.EventIndex);
 
         public bool HasNext()

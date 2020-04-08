@@ -64,11 +64,11 @@ namespace Azure.Storage.Blobs.ChangeFeed.Tests
             BlobChangeFeedClient blobChangeFeedClient = service.GetChangeFeedClient();
             BlobChangeFeedAsyncPagable blobChangeFeedAsyncPagable
                 = blobChangeFeedClient.GetChangesAsync();
-            IAsyncEnumerable<Page<BlobChangeFeedEvent>> asyncEnumerable = blobChangeFeedAsyncPagable.AsPages(pageSizeHint: 10);
+            IAsyncEnumerable<Page<BlobChangeFeedEvent>> asyncEnumerable = blobChangeFeedAsyncPagable.AsPages(pageSizeHint: 500);
             Page<BlobChangeFeedEvent> page = await asyncEnumerable.FirstAsync();
             foreach (BlobChangeFeedEvent changeFeedEvent in page.Values)
             {
-                Console.WriteLine(changeFeedEvent.Id);
+                Console.WriteLine(changeFeedEvent);
             }
 
             Console.WriteLine("break");
@@ -81,7 +81,7 @@ namespace Azure.Storage.Blobs.ChangeFeed.Tests
             IList<BlobChangeFeedEvent> list = await cursorBlobChangeFeedAsyncPagable.ToListAsync();
             foreach (BlobChangeFeedEvent e in list)
             {
-                Console.WriteLine(e.Id);
+                Console.WriteLine(e);
             }
 
         }

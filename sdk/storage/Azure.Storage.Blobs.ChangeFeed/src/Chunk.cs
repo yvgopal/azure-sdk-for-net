@@ -4,12 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Threading.Tasks;
-using Azure.Core.Pipeline;
-using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.ChangeFeed.Models;
-using Azure.Storage.Blobs.Models;
 using Azure.Storage.Internal.Avro;
 
 namespace Azure.Storage.Blobs.ChangeFeed
@@ -25,75 +21,73 @@ namespace Azure.Storage.Blobs.ChangeFeed
         private readonly BlobClient _blobClient;
 
         /// <summary>
-        /// The index of the event we are currently processing.
-        /// </summary>
-        //TODO this might not work if we don't download the entire chunk at a time.
-        public long EventIndex { get; private set; }
-
-        /// <summary>
         /// Avro Reader to parser the Events.
         /// </summary>
-        //private IFileReader<GenericRecord> _avroReader;
         private AvroReader _avroReader;
 
         /// <summary>
-        /// If this Chunk has been initalized.
+        /// The byte offset of the beginning of the current
+        /// Block.
         /// </summary>
-        private bool _isInitialized;
+        public long BlockOffset { get; private set; }
 
         /// <summary>
-        /// Underlying stream.
+        /// The index of the Event within the current block.
         /// </summary>
-        private LazyLoadingBlobStream _stream;
+        public long EventIndex { get; private set; }
+
+
+        /// <summary>
+        /// Data stream.
+        /// </summary>
+        private LazyLoadingBlobStream _dataStream;
+
+        /// <summary>
+        /// Avro head stream.
+        /// </summary>
+        private Stream _headStream;
 
         public Chunk(
             BlobContainerClient containerClient,
             string chunkPath,
+            long? blockOffset = default,
             long? eventIndex = default)
         {
             _blobClient = containerClient.GetBlobClient(chunkPath);
-            _isInitialized = false;
+            BlockOffset = blockOffset ?? 0;
             EventIndex = eventIndex ?? 0;
-            _stream = new LazyLoadingBlobStream(_blobClient, offset: 0, blockSize: Constants.ChangeFeed.ChunkBlockDownloadSize);
-        }
 
-        //TODO need to figure out how to not download the entire chunk
-        //TODO figure out live streaming
-        private async Task Initalize(
-            bool async)
-        {
-            _isInitialized = true;
-            _avroReader = new AvroReader(_stream);
+            _dataStream = new LazyLoadingBlobStream(
+                _blobClient,
+                offset: BlockOffset,
+                blockSize: Constants.ChangeFeed.ChunkBlockDownloadSize);
 
-            // Fast forward to next event.
-            //TODO this won't work if we decide to only download part of the Chunck.
-            if (EventIndex > 0)
+            // We aren't starting from the beginning of the Chunk
+            if (BlockOffset != 0)
             {
-                for (int i = 0; i < EventIndex; i++)
-                {
-                    await _avroReader.Next(async).ConfigureAwait(false);
-                }
+                _headStream = new LazyLoadingBlobStream(
+                    _blobClient,
+                    offset: 0,
+                    blockSize: 3 * Constants.KB);
+
+                _avroReader = new AvroReader(
+                    _dataStream,
+                    _headStream,
+                    BlockOffset,
+                    EventIndex);
+            }
+            else
+            {
+                _avroReader = new AvroReader(_dataStream);
             }
         }
 
         //TODO what if the Segment isn't Finalized??
         public bool HasNext()
-        {
-            if (!_isInitialized)
-            {
-                return true;
-            }
-
-            return _avroReader.HasNext();
-        }
+            => _avroReader.HasNext();
 
         public async Task<BlobChangeFeedEvent> Next(bool async)
         {
-            if (!_isInitialized)
-            {
-                await Initalize(async).ConfigureAwait(false);
-            }
-
             Dictionary<string, object> result;
 
             if (!HasNext())
@@ -102,12 +96,16 @@ namespace Azure.Storage.Blobs.ChangeFeed
             }
 
             result = await _avroReader.Next(async).ConfigureAwait(false);
-
-            EventIndex++;
+            BlockOffset = _avroReader.BlockOffset;
+            EventIndex = _avroReader.ObjectIndex;
             return new BlobChangeFeedEvent(result);
         }
 
-        /// <inheritdoc/>
-        public void Dispose() => _stream.Dispose();
+        public void Dispose()
+        {
+            _dataStream.Dispose();
+            _headStream.Dispose();
+            GC.SuppressFinalize(this);
+        }
     }
 }

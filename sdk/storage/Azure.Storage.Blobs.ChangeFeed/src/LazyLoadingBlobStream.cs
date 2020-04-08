@@ -210,7 +210,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
 
         /// <inheritdoc/>
         public override long Position {
-            get => throw new NotSupportedException();
+            get => _stream.Position;
             set => throw new NotSupportedException();
         }
 
