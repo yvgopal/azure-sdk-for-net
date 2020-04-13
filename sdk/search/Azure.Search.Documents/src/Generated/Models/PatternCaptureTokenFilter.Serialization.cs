@@ -37,7 +37,7 @@ namespace Azure.Search.Documents.Models
 
         internal static PatternCaptureTokenFilter DeserializePatternCaptureTokenFilter(JsonElement element)
         {
-            IList<string> patterns = new List<string>();
+            IList<string> patterns = default;
             bool? preserveOriginal = default;
             string odatatype = default;
             string name = default;
@@ -73,7 +73,7 @@ namespace Azure.Search.Documents.Models
                     continue;
                 }
             }
-            return new PatternCaptureTokenFilter(patterns, preserveOriginal, odatatype, name);
+            return new PatternCaptureTokenFilter(odatatype, name, patterns, preserveOriginal);
         }
     }
 }

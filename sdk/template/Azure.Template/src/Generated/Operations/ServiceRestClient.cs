@@ -45,17 +45,19 @@ namespace Azure.Template
             uri.AppendPath("/Operation/", false);
             request.Uri = uri;
             request.Headers.Add("Content-Type", "application/json");
-            using var content = new Utf8JsonRequestContent();
-            content.JsonWriter.WriteObjectValue(body);
-            request.Content = content;
+            if (body != null)
+            {
+                using var content = new Utf8JsonRequestContent();
+                content.JsonWriter.WriteObjectValue(body);
+                request.Content = content;
+            }
             return message;
         }
 
         /// <param name="body"> The Model to use. </param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
-        public async ValueTask<Response<Model>> OperationAsync(Model body, CancellationToken cancellationToken = default)
+        public async ValueTask<Response<Model>> OperationAsync(Model body = null, CancellationToken cancellationToken = default)
         {
-
             using var scope = clientDiagnostics.CreateScope("ServiceClient.Operation");
             scope.Start();
             try
@@ -84,9 +86,8 @@ namespace Azure.Template
 
         /// <param name="body"> The Model to use. </param>
         /// <param name="cancellationToken"> The cancellation token to use. </param>
-        public Response<Model> Operation(Model body, CancellationToken cancellationToken = default)
+        public Response<Model> Operation(Model body = null, CancellationToken cancellationToken = default)
         {
-
             using var scope = clientDiagnostics.CreateScope("ServiceClient.Operation");
             scope.Start();
             try

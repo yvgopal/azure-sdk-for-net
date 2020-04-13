@@ -85,8 +85,8 @@ namespace Azure.Search.Documents.Models
             string name = default;
             string description = default;
             string context = default;
-            IList<InputFieldMappingEntry> inputs = new List<InputFieldMappingEntry>();
-            IList<OutputFieldMappingEntry> outputs = new List<OutputFieldMappingEntry>();
+            IList<InputFieldMappingEntry> inputs = default;
+            IList<OutputFieldMappingEntry> outputs = default;
             foreach (var property in element.EnumerateObject())
             {
                 if (property.NameEquals("categories"))
@@ -183,7 +183,7 @@ namespace Azure.Search.Documents.Models
                     continue;
                 }
             }
-            return new EntityRecognitionSkill(categories, defaultLanguageCode, includeTypelessEntities, minimumPrecision, odatatype, name, description, context, inputs, outputs);
+            return new EntityRecognitionSkill(odatatype, name, description, context, inputs, outputs, categories, defaultLanguageCode, includeTypelessEntities, minimumPrecision);
         }
     }
 }

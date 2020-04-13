@@ -42,7 +42,7 @@ namespace Azure.Search.Documents.Models
 
         internal static CommonGramTokenFilter DeserializeCommonGramTokenFilter(JsonElement element)
         {
-            IList<string> commonWords = new List<string>();
+            IList<string> commonWords = default;
             bool? ignoreCase = default;
             bool? queryMode = default;
             string odatatype = default;
@@ -88,7 +88,7 @@ namespace Azure.Search.Documents.Models
                     continue;
                 }
             }
-            return new CommonGramTokenFilter(commonWords, ignoreCase, queryMode, odatatype, name);
+            return new CommonGramTokenFilter(odatatype, name, commonWords, ignoreCase, queryMode);
         }
     }
 }

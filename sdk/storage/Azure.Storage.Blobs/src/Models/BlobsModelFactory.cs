@@ -284,6 +284,32 @@ namespace Azure.Storage.Blobs.Models
         /// <summary>
         /// Creates a new BlobItem instance for mocking.
         /// </summary>
+        public static BlobItem BlobItem(
+           string name,
+           bool deleted,
+           BlobItemProperties properties,
+           string snapshot = default,
+           string versionId = default,
+           bool? isCurrentVersion = default,
+           IDictionary<string, string> metadata = default,
+           IDictionary<string, string> tags = default)
+        {
+            return new BlobItem()
+            {
+                Name = name,
+                Deleted = deleted,
+                Properties = properties,
+                Snapshot = snapshot,
+                VersionId = versionId,
+                IsCurrentVersion = isCurrentVersion,
+                Metadata = metadata,
+                Tags = tags
+            };
+        }
+
+        /// <summary>
+        /// Creates a new BlobItem instance for mocking.
+        /// </summary>
         [EditorBrowsable(EditorBrowsableState.Never)]
         public static BlobItem BlobItem(
             string name,
@@ -360,5 +386,51 @@ namespace Azure.Storage.Blobs.Models
                 EscapeCharacter = escapeCharacter,
                 HasHeaders = hasHeader
             };
+
+        /// <summary>
+        /// Creates a new BlobContainerItem instance for mocking.
+        /// </summary>
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public static BlobContainerItem BlobContainerItem(
+            string name,
+            BlobContainerProperties properties)
+            => new BlobContainerItem()
+            {
+                Name = name,
+                Properties = properties
+            };
+
+        /// <summary>
+        /// Creates a new BlobContainerProperties instance for mocking.
+        /// </summary>
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public static BlobContainerProperties BlobContainerProperties(
+            DateTimeOffset lastModified,
+            ETag eTag,
+            LeaseState? leaseState,
+            LeaseDurationType? leaseDuration,
+            PublicAccessType? publicAccess,
+            bool? hasImmutabilityPolicy,
+            LeaseStatus? leaseStatus,
+            string defaultEncryptionScope,
+            bool? preventEncryptionScopeOverride,
+            IDictionary<string, string> metadata,
+            bool? hasLegalHold)
+        {
+            return new BlobContainerProperties()
+            {
+                LastModified = lastModified,
+                ETag = eTag,
+                LeaseState = leaseState,
+                LeaseDuration = leaseDuration,
+                PublicAccess = publicAccess,
+                HasImmutabilityPolicy = hasImmutabilityPolicy,
+                LeaseStatus = leaseStatus,
+                DefaultEncryptionScope = defaultEncryptionScope,
+                PreventEncryptionScopeOverride = preventEncryptionScopeOverride,
+                Metadata = metadata,
+                HasLegalHold = hasLegalHold,
+            };
+        }
     }
 }

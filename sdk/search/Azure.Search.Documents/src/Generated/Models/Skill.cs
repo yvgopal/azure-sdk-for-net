@@ -5,25 +5,36 @@
 
 #nullable disable
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Azure.Search.Documents.Models
 {
-    /// <summary> Abstract base class for skills. </summary>
+    /// <summary> Base type for skills. </summary>
     public partial class Skill
     {
         /// <summary> Initializes a new instance of Skill. </summary>
         /// <param name="inputs"> Inputs of the skills could be a column in the source data set, or the output of an upstream skill. </param>
         /// <param name="outputs"> The output of a skill is either a field in a search index, or a value that can be consumed as an input by another skill. </param>
-        public Skill(IList<InputFieldMappingEntry> inputs, IList<OutputFieldMappingEntry> outputs)
+        public Skill(IEnumerable<InputFieldMappingEntry> inputs, IEnumerable<OutputFieldMappingEntry> outputs)
         {
-            Inputs = inputs;
-            Outputs = outputs;
+            if (inputs == null)
+            {
+                throw new ArgumentNullException(nameof(inputs));
+            }
+            if (outputs == null)
+            {
+                throw new ArgumentNullException(nameof(outputs));
+            }
+
+            Inputs = inputs.ToArray();
+            Outputs = outputs.ToArray();
             ODataType = null;
         }
 
         /// <summary> Initializes a new instance of Skill. </summary>
-        /// <param name="oDataType"> The model type. </param>
+        /// <param name="oDataType"> Identifies the concrete type of the skill. </param>
         /// <param name="name"> The name of the skill which uniquely identifies it within the skillset. A skill with no name defined will be given a default name of its 1-based index in the skills array, prefixed with the character &apos;#&apos;. </param>
         /// <param name="description"> The description of the skill which describes the inputs, outputs, and usage of the skill. </param>
         /// <param name="context"> Represents the level at which operations take place, such as the document root or document content (for example, /document or /document/content). The default is /document. </param>
@@ -39,7 +50,7 @@ namespace Azure.Search.Documents.Models
             Outputs = outputs;
         }
 
-        /// <summary> The model type. </summary>
+        /// <summary> Identifies the concrete type of the skill. </summary>
         internal string ODataType { get; set; }
         /// <summary> The name of the skill which uniquely identifies it within the skillset. A skill with no name defined will be given a default name of its 1-based index in the skills array, prefixed with the character &apos;#&apos;. </summary>
         public string Name { get; set; }
@@ -48,8 +59,8 @@ namespace Azure.Search.Documents.Models
         /// <summary> Represents the level at which operations take place, such as the document root or document content (for example, /document or /document/content). The default is /document. </summary>
         public string Context { get; set; }
         /// <summary> Inputs of the skills could be a column in the source data set, or the output of an upstream skill. </summary>
-        public IList<InputFieldMappingEntry> Inputs { get; } = new List<InputFieldMappingEntry>();
+        public IList<InputFieldMappingEntry> Inputs { get; }
         /// <summary> The output of a skill is either a field in a search index, or a value that can be consumed as an input by another skill. </summary>
-        public IList<OutputFieldMappingEntry> Outputs { get; } = new List<OutputFieldMappingEntry>();
+        public IList<OutputFieldMappingEntry> Outputs { get; }
     }
 }

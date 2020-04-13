@@ -71,8 +71,8 @@ namespace Azure.Search.Documents.Models
             string name = default;
             string description = default;
             string context = default;
-            IList<InputFieldMappingEntry> inputs = new List<InputFieldMappingEntry>();
-            IList<OutputFieldMappingEntry> outputs = new List<OutputFieldMappingEntry>();
+            IList<InputFieldMappingEntry> inputs = default;
+            IList<OutputFieldMappingEntry> outputs = default;
             foreach (var property in element.EnumerateObject())
             {
                 if (property.NameEquals("defaultToLanguageCode"))
@@ -151,7 +151,7 @@ namespace Azure.Search.Documents.Models
                     continue;
                 }
             }
-            return new TextTranslationSkill(defaultToLanguageCode, defaultFromLanguageCode, suggestedFrom, odatatype, name, description, context, inputs, outputs);
+            return new TextTranslationSkill(odatatype, name, description, context, inputs, outputs, defaultToLanguageCode, defaultFromLanguageCode, suggestedFrom);
         }
     }
 }

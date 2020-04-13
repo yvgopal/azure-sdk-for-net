@@ -42,7 +42,7 @@ namespace Azure.Search.Documents.Models
 
         internal static SynonymTokenFilter DeserializeSynonymTokenFilter(JsonElement element)
         {
-            IList<string> synonyms = new List<string>();
+            IList<string> synonyms = default;
             bool? ignoreCase = default;
             bool? expand = default;
             string odatatype = default;
@@ -88,7 +88,7 @@ namespace Azure.Search.Documents.Models
                     continue;
                 }
             }
-            return new SynonymTokenFilter(synonyms, ignoreCase, expand, odatatype, name);
+            return new SynonymTokenFilter(odatatype, name, synonyms, ignoreCase, expand);
         }
     }
 }

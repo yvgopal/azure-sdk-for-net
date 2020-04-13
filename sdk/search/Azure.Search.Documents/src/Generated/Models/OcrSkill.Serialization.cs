@@ -74,8 +74,8 @@ namespace Azure.Search.Documents.Models
             string name = default;
             string description = default;
             string context = default;
-            IList<InputFieldMappingEntry> inputs = new List<InputFieldMappingEntry>();
-            IList<OutputFieldMappingEntry> outputs = new List<OutputFieldMappingEntry>();
+            IList<InputFieldMappingEntry> inputs = default;
+            IList<OutputFieldMappingEntry> outputs = default;
             foreach (var property in element.EnumerateObject())
             {
                 if (property.NameEquals("textExtractionAlgorithm"))
@@ -158,7 +158,7 @@ namespace Azure.Search.Documents.Models
                     continue;
                 }
             }
-            return new OcrSkill(textExtractionAlgorithm, defaultLanguageCode, detectOrientation, odatatype, name, description, context, inputs, outputs);
+            return new OcrSkill(odatatype, name, description, context, inputs, outputs, textExtractionAlgorithm, defaultLanguageCode, detectOrientation);
         }
     }
 }

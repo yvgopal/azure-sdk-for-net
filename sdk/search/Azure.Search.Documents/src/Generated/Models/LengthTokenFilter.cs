@@ -5,6 +5,8 @@
 
 #nullable disable
 
+using System;
+
 namespace Azure.Search.Documents.Models
 {
     /// <summary> Removes words that are too long or too short. This token filter is implemented using Apache Lucene. </summary>
@@ -14,15 +16,20 @@ namespace Azure.Search.Documents.Models
         /// <param name="name"> The name of the token filter. It must only contain letters, digits, spaces, dashes or underscores, can only start and end with alphanumeric characters, and is limited to 128 characters. </param>
         public LengthTokenFilter(string name) : base(name)
         {
+            if (name == null)
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
+
             ODataType = "#Microsoft.Azure.Search.LengthTokenFilter";
         }
 
         /// <summary> Initializes a new instance of LengthTokenFilter. </summary>
+        /// <param name="oDataType"> Identifies the concrete type of the token filter. </param>
+        /// <param name="name"> The name of the token filter. It must only contain letters, digits, spaces, dashes or underscores, can only start and end with alphanumeric characters, and is limited to 128 characters. </param>
         /// <param name="min"> The minimum length in characters. Default is 0. Maximum is 300. Must be less than the value of max. </param>
         /// <param name="max"> The maximum length in characters. Default and maximum is 300. </param>
-        /// <param name="oDataType"> The model type. </param>
-        /// <param name="name"> The name of the token filter. It must only contain letters, digits, spaces, dashes or underscores, can only start and end with alphanumeric characters, and is limited to 128 characters. </param>
-        internal LengthTokenFilter(int? min, int? max, string oDataType, string name) : base(oDataType, name)
+        internal LengthTokenFilter(string oDataType, string name, int? min, int? max) : base(oDataType, name)
         {
             Min = min;
             Max = max;
