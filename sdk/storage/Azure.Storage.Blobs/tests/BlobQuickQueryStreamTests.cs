@@ -7,8 +7,10 @@ using System.IO;
 using System.Text;
 using Azure.Core.Testing;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Azure.Storage.Test;
 using NUnit.Framework;
+using static Azure.Storage.Test.Shared.BlobTestBase;
 
 namespace Azure.Storage.Blobs.Test
 {
@@ -32,6 +34,40 @@ namespace Azure.Storage.Blobs.Test
             TestHelper.AssertExpectedException(
                 () => BlobQuickQueryStream.ValidateReadParameters(buffer: new byte[5], offset: 6, count: 6),
                 new ArgumentException("The sum of offset and count cannot be greater than buffer length."));
+        }
+
+        [Test]
+        public void ProcessErrorRecord()
+        {
+            // Arrange
+            bool fatal = true;
+            string name = "name";
+            string description = "description";
+            long position = 12345;
+
+            Dictionary<string, object> record = new Dictionary<string, object>
+            {
+                { Constants.QuickQuery.Fatal, fatal },
+                { Constants.QuickQuery.Name, name },
+                { Constants.QuickQuery.Description, description },
+                { Constants.QuickQuery.Position, position }
+            };
+
+            BlobQueryError expectedError = new BlobQueryError
+            {
+                IsFatal = fatal,
+                Name = name,
+                Description = description,
+                Position = position
+            };
+
+            BlobQuickQueryStream quickQueryStream = new BlobQuickQueryStream(
+                new MemoryStream(),
+                default,
+                new ErrorReceiver(expectedError));
+
+            // Act
+            quickQueryStream.ProcessErrorRecord(record);
         }
     }
 }

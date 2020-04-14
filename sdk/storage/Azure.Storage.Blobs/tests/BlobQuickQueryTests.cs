@@ -424,24 +424,5 @@ namespace Azure.Storage.Blobs.Test
             public string NoneMatch { get; set; }
             public string LeaseId { get; set; }
         }
-
-        private class ErrorReceiver
-            : IBlobQueryErrorReceiver
-        {
-            private readonly BlobQueryError _expectedBlobQueryError;
-
-            public ErrorReceiver(BlobQueryError expected)
-            {
-                _expectedBlobQueryError = expected;
-            }
-
-            public void ReportError(BlobQueryError blobQueryError)
-            {
-                Assert.AreEqual(_expectedBlobQueryError.IsFatal, blobQueryError.IsFatal);
-                Assert.AreEqual(_expectedBlobQueryError.Name, blobQueryError.Name);
-                Assert.AreEqual(_expectedBlobQueryError.Description, blobQueryError.Description);
-                Assert.AreEqual(_expectedBlobQueryError.Position, blobQueryError.Position);
-            }
-        }
     }
 }

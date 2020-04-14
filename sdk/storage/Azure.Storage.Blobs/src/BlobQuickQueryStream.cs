@@ -16,12 +16,39 @@ namespace Azure.Storage.Blobs
     /// </summary>
     internal class BlobQuickQueryStream : Stream
     {
+        /// <summary>
+        /// Underlying stream.
+        /// </summary>
         internal Stream _avroStream;
+
+        /// <summary>
+        /// Avro Reader.
+        /// </summary>
         internal AvroReader _avroReader;
+
+        /// <summary>
+        /// Buffer to hold bytes we haven't processed yet.
+        /// </summary>
         internal byte[] _buffer;
+
+        /// <summary>
+        /// Current buffer offset.
+        /// </summary>
         internal int _bufferOffset;
+
+        /// <summary>
+        /// The current length of the buffer.
+        /// </summary>
         internal int _bufferLength;
-        internal IProgress<long> _ProgressHandler;
+
+        /// <summary>
+        /// Progress handler.
+        /// </summary>
+        internal IProgress<long> _progressHandler;
+
+        /// <summary>
+        /// Error handler.
+        /// </summary>
         internal IBlobQueryErrorReceiver _errorHandler;
 
         public BlobQuickQueryStream(
@@ -31,39 +58,12 @@ namespace Azure.Storage.Blobs
         {
             _avroStream = avroStream;
             _avroReader = new AvroReader(_avroStream);
-            //TODO may need to revisit this.
             _buffer = new byte[4 * Constants.MB];
             _bufferOffset = 0;
             _bufferLength = 0;
-            _ProgressHandler = progressHandler;
+            _progressHandler = progressHandler;
             _errorHandler = nonFatalErrorHandler;
         }
-
-        /// <inheritdoc/>
-        public override bool CanRead => true;
-
-        /// <inheritdoc/>
-        public override bool CanSeek => false;
-
-        /// <inheritdoc/>
-        public override bool CanWrite => false;
-
-        /// <inheritdoc/>
-#pragma warning disable CA1065 // Do not raise exceptions in unexpected locations
-        public override long Length => throw new NotSupportedException();
-#pragma warning restore CA1065 // Do not raise exceptions in unexpected locations
-
-        /// <inheritdoc/>
-#pragma warning disable CA1065 // Do not raise exceptions in unexpected locations
-        public override long Position
-        {
-            get => throw new NotSupportedException();
-            set => throw new NotSupportedException();
-        }
-#pragma warning restore CA1065 // Do not raise exceptions in unexpected locations
-
-        /// <inheritdoc/>
-        public override void Flush() => throw new NotSupportedException();
 
         /// <inheritdoc/>
         public override int Read(byte[] buffer, int offset, int count)
@@ -74,8 +74,7 @@ namespace Azure.Storage.Blobs
             => await ReadInternal(async: true, buffer, offset, count).ConfigureAwait(false);
 
 
-        /// <inheritdoc/>
-        // Note - offest is with respect to buffer.
+        // Note - offset is with respect to buffer.
         private async Task<int> ReadInternal(bool async, byte[] buffer, int offset, int count)
         {
             ValidateReadParameters(buffer, offset, count);
@@ -124,7 +123,6 @@ namespace Azure.Storage.Blobs
             while (remainingBytes == 0)
             {
                 // Get next Record.
-                //TODO in the future, this is where we will call the async version of this.
                 Dictionary<string, object> record = await _avroReader.Next(async).ConfigureAwait(false);
 
                 switch (record["$schema"])
@@ -148,10 +146,10 @@ namespace Azure.Storage.Blobs
 
                     // Progress Record
                     case Constants.QuickQuery.ProgressRecordName:
-                        if (_ProgressHandler != default)
+                        if (_progressHandler != default)
                         {
                             record.TryGetValue(Constants.QuickQuery.BytesScanned, out object progress);
-                            _ProgressHandler.Report((long)progress);
+                            _progressHandler.Report((long)progress);
                         }
                         break;
 
@@ -162,10 +160,10 @@ namespace Azure.Storage.Blobs
 
                     // End Record
                     case Constants.QuickQuery.EndRecordName:
-                        if (_ProgressHandler != default)
+                        if (_progressHandler != default)
                         {
                             record.TryGetValue(Constants.QuickQuery.TotalBytes, out object progress);
-                            _ProgressHandler.Report((long)progress);
+                            _progressHandler.Report((long)progress);
                         }
                         return 0;
                 }
@@ -183,20 +181,6 @@ namespace Azure.Storage.Blobs
             return length;
         }
 
-        /// <inheritdoc/>
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        /// <inheritdoc/>
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        /// <inheritdoc/>
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-
-        /// <inheritdoc/>
-        protected override void Dispose(bool disposing)
-        {
-            _avroStream.Dispose();
-        }
 
         internal static void ValidateReadParameters(byte[] buffer, int offset, int count)
         {
@@ -239,6 +223,43 @@ namespace Azure.Storage.Blobs
                 };
                 _errorHandler.ReportError(blobQueryError);
             }
+        }
+
+        /// <inheritdoc/>
+        public override bool CanRead => true;
+
+        /// <inheritdoc/>
+        public override bool CanSeek => false;
+
+        /// <inheritdoc/>
+        public override bool CanWrite => false;
+
+        /// <inheritdoc/>
+        public override long Length => throw new NotSupportedException();
+
+        /// <inheritdoc/>
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        /// <inheritdoc/>
+        public override void Flush() => throw new NotSupportedException();
+
+        /// <inheritdoc/>
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        /// <inheritdoc/>
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        /// <inheritdoc/>
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        /// <inheritdoc/>
+        protected override void Dispose(bool disposing)
+        {
+            _avroStream.Dispose();
         }
     }
 }
