@@ -19,7 +19,7 @@ namespace Azure.Storage.Blobs.Test
     public class BlobQuickQueryTests : BlobTestBase
     {
         public BlobQuickQueryTests(bool async, BlobClientOptions.ServiceVersion serviceVersion)
-            : base(async, serviceVersion, RecordedTestMode.Live /* RecordedTestMode.Record /* to re-record */)
+            : base(async, serviceVersion, RecordedTestMode.Playback /* RecordedTestMode.Record /* to re-record */)
         {
         }
 
