@@ -1,0 +1,110 @@
+{
+  "Entries": [
+    {
+      "RequestUri": "https://qqaccount01.blob.preprod.core.windows.net/test-container-4d255407-e4da-ead4-4db6-ed4e5fa3cdf6?restype=container",
+      "RequestMethod": "PUT",
+      "RequestHeaders": {
+        "Authorization": "Sanitized",
+        "traceparent": "00-6c498b6b9517a14bb00f9584f5e999f9-66fe252fb9e2c84c-00",
+        "User-Agent": [
+          "azsdk-net-Storage.Blobs/12.5.0-dev.20200420.1",
+          "(.NET Core 4.6.28325.01; Microsoft Windows 10.0.18362 )"
+        ],
+        "x-ms-blob-public-access": "container",
+        "x-ms-client-request-id": "6c352a3e-d82b-e6a6-1d43-2499b68936ba",
+        "x-ms-date": "Mon, 20 Apr 2020 17:40:45 GMT",
+        "x-ms-return-client-request-id": "true",
+        "x-ms-version": "2019-10-10"
+      },
+      "RequestBody": null,
+      "StatusCode": 201,
+      "ResponseHeaders": {
+        "Date": "Mon, 20 Apr 2020 17:40:43 GMT",
+        "ETag": "\u00220x8D7E551F3C5ACE7\u0022",
+        "Last-Modified": "Mon, 20 Apr 2020 17:40:44 GMT",
+        "Server": [
+          "Windows-Azure-Blob/1.0",
+          "Microsoft-HTTPAPI/2.0"
+        ],
+        "Transfer-Encoding": "chunked",
+        "x-ms-client-request-id": "6c352a3e-d82b-e6a6-1d43-2499b68936ba",
+        "x-ms-request-id": "473254b6-301e-0010-0e3a-17f9e9000000",
+        "x-ms-version": "2019-10-10"
+      },
+      "ResponseBody": []
+    },
+    {
+      "RequestUri": "https://qqaccount01.blob.preprod.core.windows.net/test-container-4d255407-e4da-ead4-4db6-ed4e5fa3cdf6/test-blob-87671c1a-f7f7-8b3e-9ce2-3bf0e8b1443c?comp=query",
+      "RequestMethod": "POST",
+      "RequestHeaders": {
+        "Authorization": "Sanitized",
+        "Content-Length": "125",
+        "Content-Type": "application/xml",
+        "traceparent": "00-ed2d37fc04593543b299be129cff2794-52b01a116467004a-00",
+        "User-Agent": [
+          "azsdk-net-Storage.Blobs/12.5.0-dev.20200420.1",
+          "(.NET Core 4.6.28325.01; Microsoft Windows 10.0.18362 )"
+        ],
+        "x-ms-client-request-id": "890840b4-31a9-4784-ecaa-d0499db6fd6c",
+        "x-ms-date": "Mon, 20 Apr 2020 17:40:45 GMT",
+        "x-ms-return-client-request-id": "true",
+        "x-ms-version": "2019-10-10"
+      },
+      "RequestBody": "\u003CQueryRequest\u003E\u003CQueryType\u003ESQL\u003C/QueryType\u003E\u003CExpression\u003ESELECT _2 from BlobStorage WHERE _1 \u0026gt; 250;\u003C/Expression\u003E\u003C/QueryRequest\u003E",
+      "StatusCode": 404,
+      "ResponseHeaders": {
+        "Content-Length": "216",
+        "Content-Type": "application/xml",
+        "Date": "Mon, 20 Apr 2020 17:40:43 GMT",
+        "Server": [
+          "Windows-Azure-Blob/1.0",
+          "Microsoft-HTTPAPI/2.0"
+        ],
+        "x-ms-client-request-id": "890840b4-31a9-4784-ecaa-d0499db6fd6c",
+        "x-ms-error-code": "BlobNotFound",
+        "x-ms-request-id": "473254bb-301e-0010-113a-17f9e9000000",
+        "x-ms-version": "2019-10-10"
+      },
+      "ResponseBody": [
+        "\uFEFF\u003C?xml version=\u00221.0\u0022 encoding=\u0022utf-8\u0022?\u003E\n",
+        "\u003CError\u003E\u003CCode\u003EBlobNotFound\u003C/Code\u003E\u003CMessage\u003EThe specified blob does not exist.\n",
+        "RequestId:473254bb-301e-0010-113a-17f9e9000000\n",
+        "Time:2020-04-20T17:40:44.1764985Z\u003C/Message\u003E\u003C/Error\u003E"
+      ]
+    },
+    {
+      "RequestUri": "https://qqaccount01.blob.preprod.core.windows.net/test-container-4d255407-e4da-ead4-4db6-ed4e5fa3cdf6?restype=container",
+      "RequestMethod": "DELETE",
+      "RequestHeaders": {
+        "Authorization": "Sanitized",
+        "traceparent": "00-f279dc06ba63644b9ec4cac444200a5e-9b56a81099d10a44-00",
+        "User-Agent": [
+          "azsdk-net-Storage.Blobs/12.5.0-dev.20200420.1",
+          "(.NET Core 4.6.28325.01; Microsoft Windows 10.0.18362 )"
+        ],
+        "x-ms-client-request-id": "a73bb354-bba8-cb92-edc8-49c39082fdd4",
+        "x-ms-date": "Mon, 20 Apr 2020 17:40:45 GMT",
+        "x-ms-return-client-request-id": "true",
+        "x-ms-version": "2019-10-10"
+      },
+      "RequestBody": null,
+      "StatusCode": 202,
+      "ResponseHeaders": {
+        "Date": "Mon, 20 Apr 2020 17:40:43 GMT",
+        "Server": [
+          "Windows-Azure-Blob/1.0",
+          "Microsoft-HTTPAPI/2.0"
+        ],
+        "Transfer-Encoding": "chunked",
+        "x-ms-client-request-id": "a73bb354-bba8-cb92-edc8-49c39082fdd4",
+        "x-ms-request-id": "473254bc-301e-0010-123a-17f9e9000000",
+        "x-ms-version": "2019-10-10"
+      },
+      "ResponseBody": []
+    }
+  ],
+  "Variables": {
+    "RandomSeed": "400199744",
+    "Storage_TestConfigDefault": "ProductionTenant\nqqaccount01\nU2FuaXRpemVk\nhttps://qqaccount01.blob.preprod.core.windows.net\nhttps://qqaccount01.file.preprod.core.windows.net\nhttps://qqaccount01.queue.preprod.core.windows.net\nhttps://qqaccount01.table.preprod.core.windows.net\n\n\n\n\nhttps://qqaccount01-secondary.blob.preprod.core.windows.net\nhttps://qqaccount01-secondary.file.preprod.core.windows.net\nhttps://qqaccount01-secondary.queue.preprod.core.windows.net\nhttps://qqaccount01-secondary.table.preprod.core.windows.net\n\nSanitized\n\n\nCloud\nBlobEndpoint=https://qqaccount01.blob.preprod.core.windows.net/;QueueEndpoint=https://qqaccount01.queue.preprod.core.windows.net/;FileEndpoint=https://qqaccount01.file.preprod.core.windows.net/;BlobSecondaryEndpoint=https://qqaccount01-secondary.blob.preprod.core.windows.net/;QueueSecondaryEndpoint=https://qqaccount01-secondary.queue.preprod.core.windows.net/;FileSecondaryEndpoint=https://qqaccount01-secondary.file.preprod.core.windows.net/;AccountName=qqaccount01;AccountKey=Sanitized\nseanscope1"
+  }
+}

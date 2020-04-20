@@ -24,7 +24,6 @@ namespace Azure.Storage.Blobs.Test
         }
 
         [Test]
-        //[Ignore("Recording framework doesn't play nicely with Avro")]
         [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_Min()
         {
@@ -46,7 +45,7 @@ namespace Azure.Storage.Blobs.Test
         }
 
         [Test]
-        //[Ignore("Recording framework doesn't play nicely with Avro")]
+
         [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_Snapshot()
         {
@@ -70,7 +69,6 @@ namespace Azure.Storage.Blobs.Test
         }
 
         [Test]
-        //[Ignore("Recording framework doesn't play nicely with Avro")]
         [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_Error()
         {
@@ -87,7 +85,7 @@ namespace Azure.Storage.Blobs.Test
         }
 
         [Test]
-        //[Ignore("Don't want to record 16 MB of data.")]
+        [Ignore("Don't want to record 16 MB of data.")]
         [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_MultipleDataRecords()
         {
@@ -125,7 +123,7 @@ namespace Azure.Storage.Blobs.Test
         }
 
         [Test]
-        //[Ignore("Don't want to record 120 MB of data.")]
+        [Ignore("Don't want to record 120 MB of data.")]
         [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_Large()
         {
@@ -155,7 +153,6 @@ namespace Azure.Storage.Blobs.Test
         }
 
         [Test]
-        //[Ignore("Recording framework doesn't play nicely with Avro")]
         [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_Progress()
         {
@@ -182,7 +179,6 @@ namespace Azure.Storage.Blobs.Test
         }
 
         [Test]
-        //[Ignore("Recording framework doesn't play nicely with Avro")]
         [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_QueryTextConfigurations()
         {
@@ -222,7 +218,6 @@ namespace Azure.Storage.Blobs.Test
         }
 
         [Test]
-        //[Ignore("Recording framework doesn't play nicely with Avro")]
         [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_NonFatalError()
         {
@@ -258,7 +253,6 @@ namespace Azure.Storage.Blobs.Test
         }
 
         [Test]
-        //[Ignore("Recording framework doesn't play nicely with Avro")]
         [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_FatalError()
         {
@@ -299,7 +293,6 @@ namespace Azure.Storage.Blobs.Test
         }
 
         [Test]
-        //[Ignore("Recording framework doesn't play nicely with Avro")]
         [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_AccessConditions()
         {
@@ -331,7 +324,6 @@ namespace Azure.Storage.Blobs.Test
         }
 
         [Test]
-        //[Ignore("Recording framework doesn't play nicely with Avro")]
         [ServiceVersion(Min = BlobClientOptions.ServiceVersion.V2019_12_12)]
         public async Task QueryAsync_AccessConditionsFail()
         {
