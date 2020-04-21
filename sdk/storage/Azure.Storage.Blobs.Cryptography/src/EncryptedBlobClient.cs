@@ -94,6 +94,7 @@ namespace Azure.Storage.Blobs.Specialized
                   options)
         {
             KeyWrapper = encryptionOptions.KeyEncryptionKey;
+            KeyResolver = encryptionOptions.KeyResolver;
             KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
         }
 
@@ -125,6 +126,7 @@ namespace Azure.Storage.Blobs.Specialized
                   options)
         {
             KeyWrapper = encryptionOptions.KeyEncryptionKey;
+            KeyResolver = encryptionOptions.KeyResolver;
             KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
         }
 
@@ -161,6 +163,7 @@ namespace Azure.Storage.Blobs.Specialized
                   options)
         {
             KeyWrapper = encryptionOptions.KeyEncryptionKey;
+            KeyResolver = encryptionOptions.KeyResolver;
             KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
         }
 
@@ -197,6 +200,7 @@ namespace Azure.Storage.Blobs.Specialized
                   options)
         {
             KeyWrapper = encryptionOptions.KeyEncryptionKey;
+            KeyResolver = encryptionOptions.KeyResolver;
             KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
         }
 
@@ -208,6 +212,7 @@ namespace Azure.Storage.Blobs.Specialized
             : base(blobUri, authentication, options)
         {
             KeyWrapper = encryptionOptions.KeyEncryptionKey;
+            KeyResolver = encryptionOptions.KeyResolver;
             KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
         }
 

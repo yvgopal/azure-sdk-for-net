@@ -150,6 +150,44 @@ namespace Azure.Storage.Blobs.Cryptography.Tests
             }
         }
 
+        [Test] // multiple unalligned blocks
+        [LiveOnly] // cannot seed content encryption key
+        public async Task KeyResolverKicksIn()
+        {
+            var data = GetRandomBuffer(Constants.KB);
+            var mockKey = new MockKeyEncryptionKey();
+            await using (var disposable = await GetTestContainerAsync())
+            {
+                string blobName = GetNewBlobName();
+                // upload with encryption
+                await GetEncryptedBlobClient(
+                    disposable.Container,
+                    blobName,
+                    new ClientsideEncryptionOptions()
+                    {
+                        KeyEncryptionKey = mockKey,
+                        KeyResolver = mockKey
+                    }).UploadAsync(new MemoryStream(data));
+
+                // download with decryption and no cached key
+                byte[] downloadData;
+                using (var stream = new MemoryStream())
+                {
+                    await GetEncryptedBlobClient(
+                        disposable.Container,
+                        blobName,
+                        new ClientsideEncryptionOptions()
+                        {
+                            KeyResolver = mockKey
+                        }).DownloadToAsync(stream);
+                    downloadData = stream.ToArray();
+                }
+
+                // compare data
+                Assert.AreEqual(data, downloadData);
+            }
+        }
+
         [TestCase(0, 16)]  // first block
         [TestCase(16, 16)] // not first block
         [TestCase(32, 32)] // multiple blocks; IV not at blob start

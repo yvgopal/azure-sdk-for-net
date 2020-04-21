@@ -194,6 +194,7 @@ namespace Azure.Storage.Queues.Specialized
         {
             KeyWrapper = encryptionOptions.KeyEncryptionKey;
             KeyWrapAlgorithm = encryptionOptions.EncryptionKeyWrapAlgorithm;
+            KeyResolver = encryptionOptions.KeyResolver;
         }
 
         /// <summary>
