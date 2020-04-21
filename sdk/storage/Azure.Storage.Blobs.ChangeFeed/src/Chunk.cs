@@ -95,7 +95,7 @@ namespace Azure.Storage.Blobs.ChangeFeed
                 return null;
             }
 
-            result = await _avroReader.Next(async).ConfigureAwait(false);
+            result = (Dictionary<string, object>)await _avroReader.Next(async).ConfigureAwait(false);
             BlockOffset = _avroReader.BlockOffset;
             EventIndex = _avroReader.ObjectIndex;
             return new BlobChangeFeedEvent(result);

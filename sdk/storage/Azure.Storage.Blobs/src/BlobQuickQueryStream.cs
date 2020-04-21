@@ -123,7 +123,7 @@ namespace Azure.Storage.Blobs
             while (remainingBytes == 0)
             {
                 // Get next Record.
-                Dictionary<string, object> record = await _avroReader.Next(async).ConfigureAwait(false);
+                Dictionary<string, object> record = (Dictionary<string, object>)await _avroReader.Next(async).ConfigureAwait(false);
 
                 switch (record["$schema"])
                 {
