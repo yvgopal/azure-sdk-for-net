@@ -13,4 +13,6 @@ jobs:
     ServiceDirectory: search
     MaxParallel: 2
     EnvVars:
+      # Variables set at queue-time don't seem to persist as environment variables in templates.
+      AZURE_SEARCH_TEST_VERBOSE: $(AZURE_SEARCH_TEST_VERBOSE)
       AZURE_SEARCH_TEST_MODE: Live
