@@ -3,7 +3,7 @@
 Param
 (
     [Parameter(Position=0, Mandatory=$true)]
-    [ValidateSet("dotnet","java","javascript","python")]
+    [ValidateSet("net","java","js","python")]
     [string]
     $Language,
     [Parameter(Position=1, Mandatory=$true)]
@@ -13,9 +13,9 @@ Param
 
 function Extract-PkgProps ($pkgPath, $pkgName)
 {
-    if ($Language -eq "dotnet") { Extract-DotNetPkgProps -pkgPath $pkgPath -pkgName $pkgName }
+    if ($Language -eq "net") { Extract-DotNetPkgProps -pkgPath $pkgPath -pkgName $pkgName }
     if ($Language -eq "java") { Extract-JavaPkgProps -pkgPath $pkgPath -pkgName $pkgName }
-    if ($Language -eq "javascript") { Extract-JsPkgProps -pkgPath $pkgPath -pkgName $pkgName }
+    if ($Language -eq "js") { Extract-JsPkgProps -pkgPath $pkgPath -pkgName $pkgName }
     if ($Language -eq "python") { Extract-PythonPkgProps -pkgPath $pkgPath -pkgName $pkgName }
 }
 
