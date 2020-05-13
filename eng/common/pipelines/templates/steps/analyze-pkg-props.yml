@@ -4,18 +4,25 @@ steps:
 
 - ${{ each artifact in parameters.Artifacts }}:
   - pwsh: |
-      Write-Host "Started to run"
       $Language = "$(Build.Repository.Name)".SubString("$(Build.Repository.Name)".LastIndexOf('-') + 1)
-      Write-Host "$Language"
-
       Import-Module "$(Build.SourcesDirectory)\eng\common\scripts\modules\Common-Functions" -ArgumentList "$Language", "$(Build.SourcesDirectory)"
-      Write-Host "Module Imported"
-
       $PkgProps = Get-PkgProperties -pkgName '${{artifact.name}}' -serviceName '${{parameters.ServiceDirectory}}'
 
-      if ($PkgProps["pkgName"] -eq $null) { Write-Warning "Package Name not found" } else { Write-Host "Package Name: " $PkgProps["pkgName"] }
-      if ($PkgProps["pkgVersion"] -eq $null) { Write-Warning "Package Version not found" } else { Write-Host "Package Version: " $PkgProps["pkgVersion"] }
-      if ($PkgProps["pkgDirPath"] -eq $null) { Write-Warning "Package Directory not found" } else { Write-Host "Package Version: " $PkgProps["pkgDirPath"] }
-      if ($PkgProps["pkgReadMePath"] -eq $null) { Write-Warning "Package Readme not found" } else { Write-Host "Package Version: " $PkgProps["pkgReadMePath"] }
-      if ($PkgProps["pkgChangeLogPath"] -eq $null) { Write-Warning "Package Changelog not found" } else { Write-Host "Package Version: " $PkgProps["pkgChangeLogPath"] }
-    displayName: 'Test Package Properties Retrieval'
+      Write-Host "Package Name: " $PkgProps["pkgName"]
+      Write-Host "Package Directory: " $PkgProps["pkgDirPath"]
+      if ($PkgProps["pkgVersion"] -eq $null) {
+        Write-Host "##[warning]Package Version not found" $PkgProps["pkgDirPath"]
+      } else {
+        Write-Host "Package Version: " $PkgProps["pkgVersion"]
+      }
+      if ($PkgProps["pkgReadMePath"] -eq $null) {
+        Write-Host "##[warning]Package Readme not found" $PkgProps["pkgDirPath"]
+      } else {
+        Write-Host "Package Readme: " $PkgProps["pkgReadMePath"]
+      }
+      if ($PkgProps["pkgChangeLogPath"] -eq $null) {
+        Write-Host "##[warning]Package Changelog not found" $PkgProps["pkgDirPath"]
+      } else {
+        Write-Host "Package Changelog: " $PkgProps["pkgChangeLogPath"]
+      }
+    displayName: 'Test ${{artifact.name}} properties'
