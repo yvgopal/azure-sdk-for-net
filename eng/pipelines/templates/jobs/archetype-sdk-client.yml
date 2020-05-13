@@ -92,6 +92,10 @@ jobs:
           # AutoRest doesn't work with versions 12.x
           versionSpec: '10.15.0'
         displayName: 'Install NodeJS'
+      - template: /eng/common/pipelines/templates/steps/analyze-pkg-props.yml
+        parameters:
+            ServiceDirectory: ${{parameters.ServiceDirectory}}
+            Artifacts: ${{parameters.Artifacts}}
       - task: PowerShell@2
         displayName: "Verify generated code"
         env:

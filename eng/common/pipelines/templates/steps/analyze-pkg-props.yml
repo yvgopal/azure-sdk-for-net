@@ -1,24 +1,21 @@
 # Expects azuresdk-github-pat is set to the PAT for azure-sdk
 # Expects the buildtools to be cloned
-
-parameters:
-  RepoRoot: $(Build.SourcesDirectory)
-  Language: $(Build.Repository.Name)
-
 steps:
 
-- pwsh: |
-    echo "git add ."
-    git add .
+- ${{ each artifact in parameters.Artifacts }}:
+  - pwsh: |
+      Write-Host "Started to run"
+      $Language = "$(Build.Repository.Name)".SubString("$(Build.Repository.Name)".LastIndexOf('-') + 1)
+      Write-Host "$Language"
 
-    echo "git diff --name-status --cached --exit-code"
-    git diff --name-status --cached --exit-code
+      Import-Module "$(Build.SourcesDirectory)\eng\common\scripts\modules\Common-Functions" -ArgumentList "$Language", "$(Build.SourcesDirectory)"
+      Write-Host "Module Imported"
 
-    if ($LastExitCode -ne 0) {
-      echo "##vso[task.setvariable variable=HasChanges]$true"
-      echo "Changes detected so setting HasChanges=true"
-    }
-    else {
-      echo "##vso[task.setvariable variable=HasChanges]$false"
-      echo "No changes so skipping code push"
-    }
+      $PkgProps = Get-PkgProperties -pkgName '${{artifact.name}}' -serviceName '${{parameters.ServiceDirectory}}'
+
+      if ($PkgProps["pkgName"] -eq $null) { Write-Warning "Package Name not found" } else { Write-Host "Package Name: " $PkgProps["pkgName"] }
+      if ($PkgProps["pkgVersion"] -eq $null) { Write-Warning "Package Version not found" } else { Write-Host "Package Version: " $PkgProps["pkgVersion"] }
+      if ($PkgProps["pkgDirPath"] -eq $null) { Write-Warning "Package Directory not found" } else { Write-Host "Package Version: " $PkgProps["pkgDirPath"] }
+      if ($PkgProps["pkgReadMePath"] -eq $null) { Write-Warning "Package Readme not found" } else { Write-Host "Package Version: " $PkgProps["pkgReadMePath"] }
+      if ($PkgProps["pkgChangeLogPath"] -eq $null) { Write-Warning "Package Changelog not found" } else { Write-Host "Package Version: " $PkgProps["pkgChangeLogPath"] }
+    displayName: 'Test Package Properties Retrieval'
