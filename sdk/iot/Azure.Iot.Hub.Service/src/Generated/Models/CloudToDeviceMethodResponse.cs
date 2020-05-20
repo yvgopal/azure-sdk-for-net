@@ -8,17 +8,17 @@
 namespace Azure.Iot.Hub.Service.Models
 {
     /// <summary> Represents the Device Method Invocation Results. </summary>
-    public partial class CloudToDeviceMethodResult
+    public partial class CloudToDeviceMethodResponse
     {
-        /// <summary> Initializes a new instance of CloudToDeviceMethodResult. </summary>
-        internal CloudToDeviceMethodResult()
+        /// <summary> Initializes a new instance of CloudToDeviceMethodResponse. </summary>
+        internal CloudToDeviceMethodResponse()
         {
         }
 
-        /// <summary> Initializes a new instance of CloudToDeviceMethodResult. </summary>
+        /// <summary> Initializes a new instance of CloudToDeviceMethodResponse. </summary>
         /// <param name="status"> Method invocation result status, provided by the device. </param>
         /// <param name="payload"> The JSON-formatted direct method result payload, up to 128kb in size; provided by the device. </param>
-        internal CloudToDeviceMethodResult(int? status, object payload)
+        internal CloudToDeviceMethodResponse(int? status, object payload)
         {
             Status = status;
             Payload = payload;

@@ -25,7 +25,7 @@ namespace Azure.Iot.Hub.Service.Models
         /// <param name="queryCondition"> Required if jobType is updateTwin or cloudToDeviceMethod. Condition for device query to get devices to execute the job on. </param>
         /// <param name="startTime"> ISO 8601 date time to start the job. </param>
         /// <param name="maxExecutionTimeInSeconds"> Max execution time in secounds (ttl duration). </param>
-        internal JobRequest(string jobId, JobRequestType? type, CloudToDeviceMethod cloudToDeviceMethod, TwinData updateTwin, string queryCondition, DateTimeOffset? startTime, long? maxExecutionTimeInSeconds)
+        internal JobRequest(string jobId, JobRequestType? type, CloudToDeviceMethodRequest cloudToDeviceMethod, TwinData updateTwin, string queryCondition, DateTimeOffset? startTime, long? maxExecutionTimeInSeconds)
         {
             JobId = jobId;
             Type = type;
@@ -41,7 +41,7 @@ namespace Azure.Iot.Hub.Service.Models
         /// <summary> The type of job to execute. </summary>
         public JobRequestType? Type { get; set; }
         /// <summary> Required if jobType is cloudToDeviceMethod. The method type and parameters. </summary>
-        public CloudToDeviceMethod CloudToDeviceMethod { get; set; }
+        public CloudToDeviceMethodRequest CloudToDeviceMethod { get; set; }
         /// <summary> The state information for a device or module. Implicitly created and deleted when the corresponding device/ module identity is created or deleted in IoT Hub. </summary>
         public TwinData UpdateTwin { get; set; }
         /// <summary> Required if jobType is updateTwin or cloudToDeviceMethod. Condition for device query to get devices to execute the job on. </summary>
