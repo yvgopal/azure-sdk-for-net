@@ -20,7 +20,7 @@ namespace Azure.Iot.Hub.Service.Models
         /// <param name="payload"> The JSON-formatted direct method payload, up to 128kb in size. </param>
         /// <param name="responseTimeoutInSeconds"> Time (in seconds) that the service waits for the method invocation to return a response. It defaults to 30 seconds. Minimum allowed value is 5 seconds, maximum allowed value is 300 seconds. </param>
         /// <param name="connectTimeoutInSeconds"> Time (in seconds) that the service waits for the device to come online. It defaults to 0, meaning the device must already be online. Maximum allowed value is 300 seconds. </param>
-        internal CloudToDeviceMethod(string methodName, object payload, int? responseTimeoutInSeconds, int? connectTimeoutInSeconds)
+        internal CloudToDeviceMethod(string methodName, string payload, int? responseTimeoutInSeconds, int? connectTimeoutInSeconds)
         {
             MethodName = methodName;
             Payload = payload;
@@ -30,8 +30,6 @@ namespace Azure.Iot.Hub.Service.Models
 
         /// <summary> Name of the method to be executed. </summary>
         public string MethodName { get; set; }
-        /// <summary> The JSON-formatted direct method payload, up to 128kb in size. </summary>
-        public object Payload { get; set; }
         /// <summary> Time (in seconds) that the service waits for the method invocation to return a response. It defaults to 30 seconds. Minimum allowed value is 5 seconds, maximum allowed value is 300 seconds. </summary>
         public int? ResponseTimeoutInSeconds { get; set; }
         /// <summary> Time (in seconds) that the service waits for the device to come online. It defaults to 0, meaning the device must already be online. Maximum allowed value is 300 seconds. </summary>

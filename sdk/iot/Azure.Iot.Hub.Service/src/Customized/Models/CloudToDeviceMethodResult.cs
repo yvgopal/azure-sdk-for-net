@@ -5,12 +5,12 @@
 
 #nullable disable
 
-using System.Text.Json;
-using Azure.Core;
-
 namespace Azure.Iot.Hub.Service.Models
 {
+    /// <summary> Represents the Device Method Invocation Results. </summary>
     public partial class CloudToDeviceMethodResult
     {
+        /// <summary> The JSON-formatted direct method result payload, up to 128kb in size; provided by the device. </summary>
+        public string Payload { get; }
     }
 }

@@ -99,7 +99,7 @@ namespace Azure.Iot.Hub.Service.Models
                     {
                         continue;
                     }
-                    cloudToDeviceMethod = CloudToDeviceMethod.DeserializeCloudToDeviceMethod(property.Value);
+                    cloudToDeviceMethod = Models.CloudToDeviceMethod.DeserializeCloudToDeviceMethod(property.Value);
                     continue;
                 }
                 if (property.NameEquals("updateTwin"))

@@ -23,7 +23,7 @@ namespace Azure.Iot.Hub.Service.Models
             if (Payload != null)
             {
                 writer.WritePropertyName("payload");
-                writer.WriteObjectValue(Payload);
+                writer.WriteStringValue(Payload);
             }
             if (ResponseTimeoutInSeconds != null)
             {
@@ -36,54 +36,6 @@ namespace Azure.Iot.Hub.Service.Models
                 writer.WriteNumberValue(ConnectTimeoutInSeconds.Value);
             }
             writer.WriteEndObject();
-        }
-
-        internal static CloudToDeviceMethod DeserializeCloudToDeviceMethod(JsonElement element)
-        {
-            string methodName = default;
-            object payload = default;
-            int? responseTimeoutInSeconds = default;
-            int? connectTimeoutInSeconds = default;
-            foreach (var property in element.EnumerateObject())
-            {
-                if (property.NameEquals("methodName"))
-                {
-                    if (property.Value.ValueKind == JsonValueKind.Null)
-                    {
-                        continue;
-                    }
-                    methodName = property.Value.GetString();
-                    continue;
-                }
-                if (property.NameEquals("payload"))
-                {
-                    if (property.Value.ValueKind == JsonValueKind.Null)
-                    {
-                        continue;
-                    }
-                    payload = property.Value.GetObject();
-                    continue;
-                }
-                if (property.NameEquals("responseTimeoutInSeconds"))
-                {
-                    if (property.Value.ValueKind == JsonValueKind.Null)
-                    {
-                        continue;
-                    }
-                    responseTimeoutInSeconds = property.Value.GetInt32();
-                    continue;
-                }
-                if (property.NameEquals("connectTimeoutInSeconds"))
-                {
-                    if (property.Value.ValueKind == JsonValueKind.Null)
-                    {
-                        continue;
-                    }
-                    connectTimeoutInSeconds = property.Value.GetInt32();
-                    continue;
-                }
-            }
-            return new CloudToDeviceMethod(methodName, payload, responseTimeoutInSeconds, connectTimeoutInSeconds);
         }
     }
 }
